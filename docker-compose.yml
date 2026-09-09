@@ -1,0 +1,121 @@
+# CaseDesk - full stack (database, API, web UI).
+#
+#   cp .env.example .env      # then edit the secrets
+#   docker compose up -d --build
+#
+# The application runs from wherever this file lives (fast SSD). Everything that
+# grows without bound - the Postgres cluster, uploaded evidence, log files - is
+# bind-mounted from DATA_ROOT, which points at the large HDD at /data.
+
+name: pss-desk
+
+services:
+  # ------------------------------------------------------------------ database
+  db:
+    image: postgres:16-alpine
+    container_name: pss-desk-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      # Keep the cluster in a subdirectory of the mount: Postgres refuses to
+      # initialise into a directory that is not empty, and a bind-mounted volume
+      # root can pick up stray entries such as lost+found.
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - ${DATA_ROOT}/postgres:/var/lib/postgresql/data
+    ports:
+      # Exposed for backups and psql access. Bound to localhost only - nothing
+      # outside this host has any business reaching the database directly.
+      - "127.0.0.1:${DB_PORT}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks: [casedesk]
+
+  # ----------------------------------------------------------------------- api
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    image: pss-desk-backend:latest
+    container_name: pss-desk-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: ${API_PORT}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?schema=public
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      ACCESS_TOKEN_EXPIRY: ${ACCESS_TOKEN_EXPIRY}
+      REFRESH_TOKEN_EXPIRY: ${REFRESH_TOKEN_EXPIRY}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN}
+      MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      APP_TIMEZONE: ${APP_TIMEZONE:-UTC}
+      # Paths inside the container; the host side of these is DATA_ROOT below.
+      STORAGE_ROOT: /data/storage
+      LOG_DIR: /data/logs
+      SEED_ON_START: ${SEED_ON_START:-false}
+    volumes:
+      - ${DATA_ROOT}/storage:/data/storage
+      - ${DATA_ROOT}/logs:/data/logs
+    ports:
+      # Direct API access for debugging and for any future service that needs to
+      # talk to it. Browsers reach the API through the web container instead.
+      - "127.0.0.1:${API_PORT}:${API_PORT}"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "require('http').get('http://127.0.0.1:'+process.env.PORT+'/api/health',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks: [casedesk]
+
+  # ------------------------------------------------------------------- web UI
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+      args:
+        VITE_API_BASE: ${VITE_API_BASE:-}
+    image: pss-desk-frontend:latest
+    container_name: pss-desk-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "${APP_PORT}:80"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks: [casedesk]
+
+networks:
+  casedesk:
+    name: pss-desk-net
+    driver: bridge

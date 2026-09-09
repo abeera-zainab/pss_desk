@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2021",
+    "useDefineForClassFields": true,
+    "lib": ["ES2021", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
+
+    // No baseUrl: it is deprecated in TypeScript 7 and unnecessary since 5.0,
+    // where "paths" resolves relative to this file. Keeping it made the pinned
+    // compiler and newer editor toolchains disagree about the same config.
+    "paths": {
+      "@shared/*": ["../shared/*"]
+    }
+  },
+  "include": ["src", "../shared"]
+}

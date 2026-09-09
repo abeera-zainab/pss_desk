@@ -1,0 +1,18 @@
+# The build context is the repository root, so keep it small and keep secrets out.
+.git
+.gitignore
+**/node_modules
+**/dist
+**/build
+**/.env
+**/.env.*
+!**/.env.example
+docs
+docker-compose.yml
+*.md
+**/*.log
+.DS_Store
+**/.DS_Store
+**/coverage
+**/.vscode
+**/.idea

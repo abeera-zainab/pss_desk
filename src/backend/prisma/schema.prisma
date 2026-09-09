@@ -1,0 +1,344 @@
+generator client {
+  provider = "prisma-client-js"
+  // "native" covers local development on any OS. The musl target is required by
+  // the Alpine-based container image: without it Prisma has no query engine to
+  // load at runtime and the API fails to start.
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+
+enum Role {
+  ADMIN
+  MANAGER
+  WORKER
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum CaseStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CLOSED
+}
+
+enum TaskStatus {
+  LOCKED
+  PENDING
+  IN_PROGRESS
+  SUBMITTED
+  UNDER_REVIEW
+  COMPLETED
+  REJECTED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  LATE
+  ON_LEAVE
+}
+
+enum LeaveType {
+  SICK
+  CASUAL
+  EARNED
+  UNPAID
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum TaskType {
+  FR
+  GEO_LOCATION
+  CYBER_INT
+}
+
+enum BoardItemType {
+  FILE
+  LINK
+  NOTE
+}
+
+// ---------- Models ----------
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  managerId    String?
+  domains      TaskType[] @default([])
+  
+  manager   User?   @relation("ManagerReports", fields: [managerId], references: [id])
+  reports   User[]  @relation("ManagerReports")
+  
+  attendances   Attendance[]
+  leaveRequests LeaveRequest[] @relation("LeaveRequester")
+  leaveReviews  LeaveRequest[] @relation("LeaveReviewer")
+  casesCreated  Case[]         @relation("CaseCreatedBy")
+  casesManaged  Case[]         @relation("CaseAssignedManager")
+  tasksAssigned Task[]         @relation("TaskAssignedTo")
+  taskAssignments TaskAssignment[]
+  comments      Comment[]
+  uploadedFiles File[]
+  notifications Notification[]
+  activityLogs  ActivityLog[]
+  refreshTokens RefreshToken[]
+
+  @@index([email])
+}
+
+model Case {
+  id                String     @id @default(uuid())
+  caseNumber        String     @unique
+  title             String
+  description       String
+  priority          Priority
+  status            CaseStatus @default(OPEN)
+  createdBy         String
+  assignedManagerId String
+  deadline          DateTime
+  requiredDocuments String[]
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  creator         User        @relation("CaseCreatedBy", fields: [createdBy], references: [id])
+  assignedManager User        @relation("CaseAssignedManager", fields: [assignedManagerId], references: [id])
+  tasks           Task[]
+  files           File[]
+  boardItems      BoardItem[]
+
+  @@index([assignedManagerId])
+  @@index([status])
+}
+
+model Task {
+  id              String     @id @default(uuid())
+  referenceId     String     @unique
+  taskType        TaskType
+  title           String
+  description     String
+  instructions    String?
+  status          TaskStatus @default(PENDING)
+  priority        Priority
+  assignedUserId  String
+  caseId          String
+  dependsOnTaskId String?
+  deadline        DateTime
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  assignedUser    User         @relation("TaskAssignedTo", fields: [assignedUserId], references: [id])
+  case            Case         @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  
+  // Self-referencing relation for task dependencies (one-to-many)
+  dependsOn       Task?        @relation("TaskDependency", fields: [dependsOnTaskId], references: [id])
+  dependents      Task[]       @relation("TaskDependency")
+  
+  comments        Comment[]
+  files           File[]
+  assignments     TaskAssignment[]
+  links           TaskLink[]
+
+  @@index([caseId])
+  @@index([assignedUserId])
+  @@index([status])
+  @@index([taskType])
+}
+model TaskAssignment {
+  id        String   @id @default(cuid())
+  taskId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@index([taskId])
+  @@index([userId])
+}
+
+model BoardItem {
+  id          String   @id @default(uuid())
+  fileId      String   @unique
+  caseId      String
+  x           Float    @default(0)
+  y           Float    @default(0)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  case  Case @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  file  File @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  connectionsFrom BoardConnection[] @relation("ConnFrom")
+  connectionsTo   BoardConnection[] @relation("ConnTo")
+
+  @@index([caseId])
+}
+
+model BoardConnection {
+  id         String   @id @default(uuid())
+  fromItemId String
+  toItemId   String
+  label      String?
+  createdAt  DateTime @default(now())
+
+  fromItem BoardItem @relation("ConnFrom", fields: [fromItemId], references: [id], onDelete: Cascade)
+  toItem   BoardItem @relation("ConnTo", fields: [toItemId], references: [id], onDelete: Cascade)
+
+  @@index([fromItemId])
+  @@index([toItemId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  taskId    String
+  authorId  String
+  message   String
+  createdAt DateTime @default(now())
+
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  author User @relation(fields: [authorId], references: [id])
+
+  @@index([taskId])
+}
+
+model File {
+  id         String   @id @default(uuid())
+  filename   String
+  storedName String
+  filepath   String
+  mimetype   String
+  size       Int
+  uploadedBy String
+  taskId     String?
+  caseId     String?
+  createdAt  DateTime @default(now())
+
+  uploader  User  @relation(fields: [uploadedBy], references: [id])
+  task     Task? @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  case     Case? @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  boardItem BoardItem?
+
+  @@index([taskId])
+  @@index([caseId])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  message   String
+  type      String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  userId     String
+  action     String
+  entityType String
+  entityId   String
+  details    String?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entityType, entityId])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Attendance {
+  id            String           @id @default(uuid())
+  userId        String
+  date          DateTime         @db.Date
+  checkIn       DateTime?
+  checkOut      DateTime?
+  status        AttendanceStatus @default(PRESENT)
+  workedMinutes Int              @default(0)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date])
+  @@index([userId])
+  @@index([date])
+}
+
+model LeaveRequest {
+  id            String      @id @default(uuid())
+  userId        String
+  type          LeaveType
+  startDate     DateTime    @db.Date
+  endDate       DateTime    @db.Date
+  days          Int
+  reason        String
+  status        LeaveStatus @default(PENDING)
+  reviewedById  String?
+  reviewComment String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  user       User  @relation("LeaveRequester", fields: [userId], references: [id])
+  reviewedBy User? @relation("LeaveReviewer", fields: [reviewedById], references: [id])
+
+  @@index([userId])
+  @@index([status])
+}
+
+model Counter {
+  key   String @id
+  value Int    @default(0)
+}
+
+model TaskLink {
+  id        String   @id @default(uuid())
+  taskId    String
+  url       String
+  label     String?
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+}

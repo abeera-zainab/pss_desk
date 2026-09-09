@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+
+# Secrets. Only the .example templates are tracked.
+.env
+.env.*
+!.env.example
+
+# Uploaded evidence and logs live on the data volume (DATA_ROOT), never in the repo.
+src/backend/storage/
+*.log
+
+.DS_Store
+.vscode/
+.idea/
+coverage/
