@@ -11,21 +11,26 @@ import { renderPdfDocument } from "./pdf";
 
 function PdfViewer({ blob }: { blob: Blob }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
+  const widthRef = useRef<HTMLDivElement | null>(null);
   const [failed, setFailed] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const host = hostRef.current;
-    if (!host) return;
+    const widthEl = widthRef.current;
+    if (!host || !widthEl) return;
     let cancelled = false;
     let renderSignal = { cancelled: false };
     let timer: number | undefined;
+    let lastWidth = 0;
 
     const run = () => {
+      const width = Math.max(320, Math.round(widthEl.clientWidth || window.innerWidth));
+      if (width === lastWidth) return;
+      lastWidth = width;
       renderSignal.cancelled = true;
       renderSignal = { cancelled: false };
       const signal = renderSignal;
-      const width = Math.max(320, host.clientWidth || window.innerWidth);
       setFailed(false);
       setLoading(true);
       renderPdfDocument(blob, host, { signal, fitWidth: width })
@@ -44,7 +49,7 @@ function PdfViewer({ blob }: { blob: Blob }) {
       window.clearTimeout(timer);
       timer = window.setTimeout(run, 120);
     });
-    ro.observe(host);
+    ro.observe(widthEl);
     run();
 
     return () => {
@@ -67,6 +72,7 @@ function PdfViewer({ blob }: { blob: Blob }) {
 
   return (
     <div className="relative min-h-full w-full">
+      <div ref={widthRef} className="h-0 w-full" />
       {loading && (
         <div className="absolute inset-0 z-10 flex items-center justify-center text-indigo-400">
           <FontAwesomeIcon icon={faSpinner} className="animate-spin text-2xl" />
