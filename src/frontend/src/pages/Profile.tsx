@@ -1,5 +1,6 @@
 import { useAuth } from "../store/auth";
 import { Badge } from "../components/ui";
+import { roleLabel } from "../lib/roles";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faUser, 
@@ -164,7 +165,7 @@ export default function Profile() {
                 <div className="mt-2 flex items-center justify-center gap-3 flex-wrap">
                   <Badge className={`${roleBadge} px-4 py-1.5 text-sm font-semibold border`}>
                     <FontAwesomeIcon icon={roleIcon} className="mr-2 text-[12px]" />
-                    {user.role}
+                    {roleLabel(user.role)}
                   </Badge>
                   <span className="flex items-center gap-1.5 text-sm font-medium" style={{ color: "#64748B" }}>
                     <FontAwesomeIcon icon={faCircle} className="text-[8px] text-emerald-400 animate-pulse" />
@@ -185,7 +186,7 @@ export default function Profile() {
                     Role
                   </div>
                   <div className="mt-1.5 text-base font-bold" style={{ color: "#1A1D23" }}>
-                    {user.role}
+                    {roleLabel(user.role)}
                   </div>
                 </div>
                 <div className="rounded-2xl border px-5 py-4 text-center transition-all duration-300 hover:shadow-md hover:-translate-y-0.5" style={{ borderColor: "#E2E8F0", background: statsBg }}>
@@ -249,7 +250,7 @@ export default function Profile() {
                 <dd className="font-semibold text-base">
                   <Badge className={`${roleBadge} px-4 py-1.5 text-sm font-semibold border`}>
                     <FontAwesomeIcon icon={roleIcon} className="mr-2 text-[11px]" />
-                    {user.role}
+                    {roleLabel(user.role)}
                   </Badge>
                 </dd>
               </div>

@@ -68,12 +68,22 @@ enum TaskType {
   FR
   GEO_LOCATION
   CYBER_INT
+  PSS_DEFENSIVE
+  PSS_OPS
+  PSS_OFFENSIVE
+  PSS_PRODUCT
 }
 
 enum BoardItemType {
   FILE
   LINK
   NOTE
+}
+
+enum CaseFileFolder {
+  INITIAL_OSINT
+  LOCATION_ANALYSIS
+  THREAT_ALERT
 }
 
 // ---------- Models ----------
@@ -226,7 +236,7 @@ model Comment {
 }
 
 model File {
-  id         String   @id @default(uuid())
+  id         String          @id @default(uuid())
   filename   String
   storedName String
   filepath   String
@@ -235,7 +245,8 @@ model File {
   uploadedBy String
   taskId     String?
   caseId     String?
-  createdAt  DateTime @default(now())
+  folder     CaseFileFolder?
+  createdAt  DateTime        @default(now())
 
   uploader  User  @relation(fields: [uploadedBy], references: [id])
   task     Task? @relation(fields: [taskId], references: [id], onDelete: Cascade)
@@ -244,6 +255,7 @@ model File {
 
   @@index([taskId])
   @@index([caseId])
+  @@index([folder])
 }
 
 model Notification {

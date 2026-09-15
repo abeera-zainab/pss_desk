@@ -58,10 +58,9 @@ export default function TaskDetail() {
   // Worker can act if they're assigned to the task
   const isOwnerWorker = user?.role === "WORKER" && isAssignedToTask;
 
-  // Check if user has permission to view this task
-  const canView = 
-    user?.role === "ADMIN" || 
-    user?.role === "MANAGER" || 
+  const canView =
+    user?.role === "ADMIN" ||
+    (user?.role === "MANAGER" && task.case?.assignedManagerId === user.id) ||
     isAssignedToTask;
 
   // If user doesn't have permission to view, show error

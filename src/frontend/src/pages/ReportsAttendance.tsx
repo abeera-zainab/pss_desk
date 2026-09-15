@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { AttendanceReportDTO, UserDTO } from "@shared/types";
+import type { AttendanceReportDTO } from "@shared/types";
 import { api, apiError } from "../lib/api";
 import { Spinner, ErrorText } from "../components/ui";
-import { useAuth } from "../store/auth";
+import { formatDurationMinutes } from "../lib/format";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faArrowLeft, 
@@ -48,32 +48,25 @@ function currentMonth() {
 }
 
 export default function ReportsAttendance() {
-  const { user } = useAuth();
-  const canFilter = user?.role === "ADMIN" || user?.role === "MANAGER";
-
   const [month, setMonth] = useState(currentMonth());
-  const [employees, setEmployees] = useState<UserDTO[]>([]);
+  const [people, setPeople] = useState<{ id: string; name: string }[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [search, setSearch] = useState("");
   const [report, setReport] = useState<AttendanceReportDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (!canFilter) return;
-    if (user?.role === "ADMIN") {
-      api.getUsers({ limit: 100 }).then((r) => setEmployees(r.data));
-    } else {
-      api.getWorkers().then(setEmployees);
-    }
-  }, [canFilter, user?.role]);
-
   function load() {
     setLoading(true);
     setError("");
     api
       .getAttendanceReport({ month, userId: selectedUserId || undefined })
-      .then(setReport)
+      .then((data) => {
+        setReport(data);
+        if (!selectedUserId) {
+          setPeople(data.data.map((row) => ({ id: row.userId, name: row.name })));
+        }
+      })
       .catch((e) => setError(apiError(e)))
       .finally(() => setLoading(false));
   }
@@ -113,19 +106,18 @@ export default function ReportsAttendance() {
               </div>
               <div>
                 <h1 className="text-2xl lg:text-3xl font-bold tracking-tight" style={{ color: "#1A1D23" }}>
-                  Attendance Report
+                  Time tracking report
                 </h1>
                 <p className="mt-0.5 text-sm flex items-center gap-2" style={{ color: "#64748B" }}>
                   <FontAwesomeIcon icon={faCalendarAlt} className="text-indigo-400 text-xs" />
-                  {month.replace('-', ' ')}
+                  Hours and attendance for {month.replace('-', ' ')}
                 </p>
               </div>
             </div>
           </div>
           
           <div className="flex flex-wrap items-center gap-2">
-            {canFilter && (
-              <>
+            <>
                 <div className="relative">
                   <FontAwesomeIcon 
                     icon={faSearch} 
@@ -147,12 +139,11 @@ export default function ReportsAttendance() {
                   onChange={(e) => setSelectedUserId(e.target.value)}
                 >
                   <option value="">All employees</option>
-                  {employees.map((e) => (
+                  {people.map((e) => (
                     <option key={e.id} value={e.id}>{e.name}</option>
                   ))}
                 </select>
               </>
-            )}
             <input
               type="month"
               className="rounded-2xl border bg-white px-3 py-2 text-sm focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
@@ -237,12 +228,15 @@ export default function ReportsAttendance() {
                       Late
                     </div>
                   </th>
+                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: "#64748B" }}>
+                    Hours
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y" style={{ borderColor: "#E2E8F0" }}>
                 {(!filteredData || filteredData.length === 0) && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center" style={{ color: "#64748B" }}>
+                    <td colSpan={7} className="px-4 py-8 text-center" style={{ color: "#64748B" }}>
                       No attendance data for this period.
                     </td>
                   </tr>
@@ -270,6 +264,9 @@ export default function ReportsAttendance() {
                     </td>
                     <td className="px-4 py-3" style={{ color: "#F59E0B" }}>
                       {row.late}
+                    </td>
+                    <td className="px-4 py-3 font-medium" style={{ color: "#1A1D23" }}>
+                      {formatDurationMinutes(row.hoursMinutes)}
                     </td>
                   </tr>
                 ))}

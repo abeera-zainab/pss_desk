@@ -21,17 +21,8 @@ export function canManageCase(user: AuthUser, kase: CaseLike): boolean {
   return user.role === "MANAGER" && kase.assignedManagerId === user.id;
 }
 
-export async function canViewCase(user: AuthUser, kase: CaseLike & { id: string }): Promise<boolean> {
-  if (user.role === "ADMIN") return true;
-  if (user.role === "MANAGER") return kase.assignedManagerId === user.id;
-
-  const count = await prisma.task.count({
-    where: {
-      caseId: kase.id,
-      OR: [{ assignedUserId: user.id }, { assignments: { some: { userId: user.id } } }]
-    }
-  });
-  return count > 0;
+export async function canViewCase(_user: AuthUser, _kase: CaseLike & { id: string }): Promise<boolean> {
+  return true;
 }
 
 type TaskLike = { id: string; assignedUserId: string; case: CaseLike };

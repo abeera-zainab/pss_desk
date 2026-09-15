@@ -24,12 +24,13 @@ export async function attendanceReport(params: {
   });
 
   // Group by user
-  const byUser: Record<string, { userId: string; name: string; present: number; absent: number; onLeave: number; halfDay: number; late: number }> = {};
+  const byUser: Record<string, { userId: string; name: string; present: number; absent: number; onLeave: number; halfDay: number; late: number; hoursMinutes: number }> = {};
   for (const r of records) {
     if (!byUser[r.userId]) {
-      byUser[r.userId] = { userId: r.userId, name: r.user.name, present: 0, absent: 0, onLeave: 0, halfDay: 0, late: 0 };
+      byUser[r.userId] = { userId: r.userId, name: r.user.name, present: 0, absent: 0, onLeave: 0, halfDay: 0, late: 0, hoursMinutes: 0 };
     }
     const bucket = byUser[r.userId];
+    bucket.hoursMinutes += r.workedMinutes ?? 0;
     if (r.status === "PRESENT") bucket.present++;
     else if (r.status === "ABSENT") bucket.absent++;
     else if (r.status === "ON_LEAVE") bucket.onLeave++;

@@ -4,7 +4,11 @@ import { TaskType } from "@prisma/client";
 const PREFIX: Record<TaskType, string> = {
   FR: "FR",
   GEO_LOCATION: "GEO",
-  CYBER_INT: "CYB"
+  CYBER_INT: "CYB",
+  PSS_DEFENSIVE: "DEF",
+  PSS_OPS: "OPS",
+  PSS_OFFENSIVE: "OFF",
+  PSS_PRODUCT: "PRD"
 };
 
 export async function generateTaskReferenceId(taskType: TaskType): Promise<string> {

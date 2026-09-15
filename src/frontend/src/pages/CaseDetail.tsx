@@ -5,9 +5,10 @@ import { api, apiError } from "../lib/api";
 import { useAuth } from "../store/auth";
 import { Badge, Modal, ErrorText, Spinner, EmptyState } from "../components/ui";
 import { CASE_STATUS_BADGE, PRIORITY_BADGE, TASK_STATUS_BADGE, TASK_STATUS_LABEL } from "../lib/meta";
-import { formatDate, fileSize } from "../lib/format";
+import { formatDate } from "../lib/format";
 import { card, label, input, btn, btnDark, heading, eyebrow, link, colors } from "../lib/theme";
 import CaseBoard from "./CaseBoard";
+import { ReportLibrary } from "../components/caseFiles";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
@@ -15,38 +16,16 @@ import {
   faTasks,
   faUserTie,
   faCalendarAlt,
-  faClock,
   faPlus,
-  faDownload,
-  faUpload,
   faRocket,
   faTag,
   faUsers,
   faCheckCircle,
-  faExclamationTriangle,
   faPaperclip,
   faLink as faLinkIcon,
-  faEye,
-  faFilePdf,
-  faImage,
-  faFileWord,
-  faFileExcel,
-  faFileArchive,
-  faFileCode,
   faFire,
   faArrowRight,
-  faSpinner,
-  faThumbsUp,
-  faStar,
-  faGem,
-  faBolt,
-  faCircle,
-  faGrip,
-  faList,
-  faFileInvoice,
-  faChartPie,
-  faUserPlus,
-  faUserMinus
+  faFileInvoice
 } from "@fortawesome/free-solid-svg-icons";
 
 function CaseDetailKeyframes() {
@@ -89,17 +68,6 @@ function CaseDetailKeyframes() {
   );
 }
 
-const getFileIcon = (filename: string) => {
-  const ext = filename.split(".").pop()?.toLowerCase();
-  if (["pdf"].includes(ext || "")) return faFilePdf;
-  if (["jpg", "jpeg", "png", "gif", "svg", "webp"].includes(ext || "")) return faImage;
-  if (["doc", "docx"].includes(ext || "")) return faFileWord;
-  if (["xls", "xlsx", "csv"].includes(ext || "")) return faFileExcel;
-  if (["zip", "rar", "7z", "tar", "gz"].includes(ext || "")) return faFileArchive;
-  if (["js", "ts", "jsx", "tsx", "html", "css", "json", "xml"].includes(ext || "")) return faFileCode;
-  return faFileAlt;
-};
-
 export default function CaseDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -108,7 +76,6 @@ export default function CaseDetail() {
   const [showTask, setShowTask] = useState(false);
   const [editingTask, setEditingTask] = useState<TaskDTO | null>(null);
   const [loading, setLoading] = useState(false);
-  const fileInput = useRef<HTMLInputElement>(null);
 
   function load() {
     if (!id) return;
@@ -126,25 +93,8 @@ export default function CaseDetail() {
   }
   useEffect(load, [id]);
 
-  // Is the user attached to any task on this case, as primary or co-assignee?
-  const isAssignedToTask = !!kase && kase.tasks?.some(task => {
-    // Check if user is primary assignee
-    if (task.assignedUserId === user?.id) return true;
-    // Check if user is in assignments array
-    if (task.assignments && task.assignments.some((a: any) => a.userId === user?.id || a.user?.id === user?.id)) return true;
-    return false;
-  });
-
-  // Allow access if ADMIN, MANAGER of the case, or worker assigned to a task
   const canManage = !!kase && (
-    user?.role === "ADMIN" || 
-    (user?.role === "MANAGER" && kase.assignedManagerId === user.id) ||
-    (user?.role === "WORKER" && isAssignedToTask)
-  );
-
-  // For upload and other actions that need management permissions
-  const canUpload = !!kase && (
-    user?.role === "ADMIN" || 
+    user?.role === "ADMIN" ||
     (user?.role === "MANAGER" && kase.assignedManagerId === user.id)
   );
 
@@ -153,16 +103,6 @@ export default function CaseDetail() {
     user?.role === "ADMIN" || 
     (user?.role === "MANAGER" && kase.assignedManagerId === user.id)
   );
-
-  async function uploadCaseFile(file: File) {
-    if (!id) return;
-    try {
-      await api.uploadCaseFile(id, file);
-      load();
-    } catch (e) {
-      alert(apiError(e));
-    }
-  }
 
   if (error) return <ErrorText message={error} />;
   if (loading || !kase) return <Spinner />;
@@ -255,6 +195,16 @@ export default function CaseDetail() {
         </div>
       </div>
 
+      <div className="mt-6" style={{ animation: "fadeUp 0.5s ease-out 0.08s both" }}>
+        <ReportLibrary
+          kase={kase}
+          canUpload={
+            user?.role === "ADMIN" || (user?.role === "MANAGER" && kase.assignedManagerId === user.id)
+          }
+          onChanged={load}
+        />
+      </div>
+
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="space-y-6">
           {kase.requiredDocuments?.length > 0 && (
@@ -291,86 +241,6 @@ export default function CaseDetail() {
             </div>
           )}
 
-          <div
-            className="rounded-3xl border bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-md"
-            style={{ borderColor: "#E2E8F0", animation: "fadeUp 0.5s ease-out 0.15s both" }}
-          >
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: "#EEF2FF" }}>
-                  <FontAwesomeIcon icon={faPaperclip} className="text-indigo-500" />
-                </div>
-                <h2 className="text-sm font-semibold" style={{ color: "#1A1D23" }}>
-                  Case Files
-                </h2>
-                <span className="rounded-full px-2.5 py-0.5 text-xs" style={{ background: "#EEF2FF", color: "#6366F1" }}>
-                  {kase.files?.length ?? 0}
-                </span>
-              </div>
-              {canUpload && (
-                <>
-                  <input
-                    ref={fileInput}
-                    type="file"
-                    className="hidden"
-                    onChange={(e) => e.target.files?.[0] && uploadCaseFile(e.target.files[0])}
-                  />
-                  <button
-                    className="flex items-center gap-2 rounded-xl px-3.5 py-2 text-xs font-medium text-white transition-all duration-300 hover:scale-105 active:scale-95"
-                    style={{ background: "linear-gradient(135deg, #6366F1, #8B5CF6)", boxShadow: "0 4px 16px rgba(99, 102, 241, 0.3)" }}
-                    onClick={() => fileInput.current?.click()}
-                  >
-                    <FontAwesomeIcon icon={faUpload} className="text-[10px]" />
-                    Upload
-                  </button>
-                </>
-              )}
-            </div>
-
-            {!kase.files || kase.files.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed py-8" style={{ borderColor: "#E2E8F0" }}>
-                <div className="flex h-14 w-14 items-center justify-center rounded-full" style={{ background: "#EEF2FF" }}>
-                  <FontAwesomeIcon icon={faFileAlt} className="text-2xl text-indigo-500" />
-                </div>
-                <p className="mt-2 text-sm font-medium" style={{ color: "#64748B" }}>
-                  No files attached
-                </p>
-                <p className="text-xs" style={{ color: "#94A3B8" }}>
-                  Upload files to share with the team
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                {kase.files.map((f, index) => {
-                  const fileIcon = getFileIcon(f.filename);
-                  return (
-                    <div
-                      key={f.id}
-                      className="flex items-center justify-between rounded-xl px-2 py-2.5 transition-all duration-300 hover:translate-x-1 hover:bg-slate-50"
-                      style={{ animation: `slideIn 0.3s ease-out ${index * 40}ms both` }}
-                    >
-                      <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg" style={{ background: "#EEF2FF" }}>
-                          <FontAwesomeIcon icon={fileIcon} className="text-xs text-indigo-500" />
-                        </div>
-                        <span className="truncate text-sm font-medium" style={{ color: "#1A1D23" }}>
-                          {f.filename}
-                        </span>
-                      </div>
-                      <button
-                        className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-300 hover:bg-indigo-50"
-                        style={{ color: "#6366F1" }}
-                        onClick={() => api.downloadFile(f.id, f.filename)}
-                      >
-                        <FontAwesomeIcon icon={faDownload} className="text-[9px]" />
-                        {fileSize(f.size)}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
 
           <div style={{ animation: "fadeUp 0.5s ease-out 0.2s both" }}>
             <div className="mb-4 flex items-center justify-between gap-3">

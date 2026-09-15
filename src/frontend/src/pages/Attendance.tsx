@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import type { AttendanceDTO } from "@shared/types";
 import { api, apiError } from "../lib/api";
 import { Badge, Spinner, ErrorText } from "../components/ui";
-import { formatDate } from "../lib/format";
+import { formatDate, formatDurationMinutes, elapsedMinutesSince } from "../lib/format";
+import type { UserDTO } from "@shared/types";
 import { useAuth } from "../store/auth";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -73,10 +74,12 @@ function fmtTime(t: string | null | undefined) {
 
 export default function Attendance() {
   const { user } = useAuth();
-  const canSeeAll = user?.role === "ADMIN" || user?.role === "MANAGER";
+  const canSeeTeam = user?.role === "ADMIN" || user?.role === "MANAGER";
 
   const [records, setRecords] = useState<AttendanceDTO[]>([]);
   const [today, setToday] = useState<AttendanceDTO | null>(null);
+  const [people, setPeople] = useState<UserDTO[]>([]);
+  const [filterUserId, setFilterUserId] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -85,14 +88,29 @@ export default function Attendance() {
 
   function load() {
     setLoading(true);
-    Promise.all([api.getAttendance({}), api.getTodayAttendance()])
+    Promise.all([
+      api.getAttendance(filterUserId ? { userId: filterUserId } : {}),
+      api.getTodayAttendance()
+    ])
       .then(([list, t]) => {
         setRecords(list);
         setToday(t);
       })
       .finally(() => setLoading(false));
   }
-  useEffect(load, []);
+  useEffect(load, [filterUserId]);
+
+  useEffect(() => {
+    if (!canSeeTeam) return;
+    if (user?.role === "ADMIN") {
+      api.getUsers({ limit: 100 }).then((r) => setPeople(r.data));
+    } else {
+      api.getWorkers().then((team) => {
+        const self = user ? [{ id: user.id, name: user.name } as UserDTO] : [];
+        setPeople([...self, ...team.filter((p) => p.id !== user?.id)]);
+      });
+    }
+  }, [canSeeTeam, user?.id, user?.role]);
 
   useEffect(() => {
     const id = setInterval(() => setClock(new Date()), 1000);
@@ -125,8 +143,20 @@ export default function Attendance() {
     }
   }
 
-  const hasCheckedIn = !!today?.checkIn;
-  const hasCheckedOut = !!today?.checkOut;
+  const sessionOpen = !!today?.checkIn && !today?.checkOut;
+  const liveMinutes = sessionOpen
+    ? (today?.workedMinutes ?? 0) + elapsedMinutesSince(today?.checkIn, clock)
+    : today?.workedMinutes ?? 0;
+
+  const dailyTotals = records.reduce<Record<string, number>>((acc, r) => {
+    const key = r.date.slice(0, 10);
+    const open = !!(r.checkIn && !r.checkOut);
+    const mins = open
+      ? (r.workedMinutes ?? 0) + elapsedMinutesSince(r.checkIn, clock)
+      : r.workedMinutes ?? 0;
+    acc[key] = (acc[key] ?? 0) + mins;
+    return acc;
+  }, {});
 
   return (
     <div className="p-6 lg:p-8" style={{ background: "#F8FAFC", minHeight: '100vh' }}>
@@ -146,7 +176,7 @@ export default function Attendance() {
           </div>
           <div>
             <h1 className="text-3xl lg:text-4xl font-bold tracking-tight" style={{ color: "#1A1D23" }}>
-              Attendance
+              Time tracking
             </h1>
             <p className="mt-0.5 text-sm flex items-center gap-2" style={{ color: "#64748B" }}>
               <FontAwesomeIcon icon={faCalendarDay} className="text-indigo-400 text-xs" />
@@ -154,6 +184,21 @@ export default function Attendance() {
             </p>
           </div>
         </div>
+        {canSeeTeam && (
+          <div className="mt-4 max-w-xs">
+            <select
+              className="w-full rounded-2xl border bg-white px-4 py-2.5 text-sm"
+              style={{ borderColor: "#E2E8F0" }}
+              value={filterUserId}
+              onChange={(e) => setFilterUserId(e.target.value)}
+            >
+              <option value="">{user?.role === "ADMIN" ? "Everyone" : "Me and my team"}</option>
+              {people.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Main Card */}
@@ -204,11 +249,16 @@ export default function Attendance() {
           <div className="rounded-2xl border bg-gray-50/50 px-6 py-5 text-center hover:shadow-md transition-shadow duration-200" style={{ borderColor: "#E2E8F0" }}>
             <div className="text-xs font-medium uppercase tracking-wider flex items-center justify-center gap-2" style={{ color: "#94A3B8" }}>
               <FontAwesomeIcon icon={faHourglass} className="text-indigo-500" />
-              Worked
+              Hours worked
             </div>
             <div className="mt-2 font-mono text-xl font-bold" style={{ color: "#1A1D23" }}>
-              {today?.workedMinutes ?? 0} min
+              {formatDurationMinutes(liveMinutes)}
             </div>
+            {sessionOpen && (
+              <div className="mt-1 text-[10px] uppercase tracking-wider" style={{ color: "#6366F1" }}>
+                Live
+              </div>
+            )}
           </div>
         </div>
 
@@ -216,29 +266,29 @@ export default function Attendance() {
         <div className="flex flex-wrap items-center justify-center gap-5">
           <button
             onClick={handleCheckIn}
-            disabled={busy || hasCheckedIn}
+            disabled={busy || sessionOpen}
             className={`flex items-center gap-3 rounded-2xl px-10 py-4 text-base font-semibold text-white shadow-md transition-colors duration-200 ${
-              busy || hasCheckedIn ? 'opacity-50 cursor-not-allowed bg-gray-400' : 'hover:shadow-lg hover:scale-[1.02]'
+              busy || sessionOpen ? 'opacity-50 cursor-not-allowed bg-gray-400' : 'hover:shadow-lg hover:scale-[1.02]'
             }`}
             style={{
-              background: busy || hasCheckedIn ? '#94A3B8' : 'linear-gradient(135deg, #10B981, #059669)',
+              background: busy || sessionOpen ? '#94A3B8' : 'linear-gradient(135deg, #10B981, #059669)',
             }}
           >
             <FontAwesomeIcon icon={faCheckCircle} className="text-lg" />
-            {busy && !hasCheckedIn ? "Processing..." : hasCheckedIn ? "Checked In ✓" : "Check In"}
+            {busy && !sessionOpen ? "Processing..." : sessionOpen ? "Checked In ✓" : "Check In"}
           </button>
           <button
             onClick={handleCheckOut}
-            disabled={busy || !hasCheckedIn || hasCheckedOut}
+            disabled={busy || !sessionOpen}
             className={`flex items-center gap-3 rounded-2xl px-10 py-4 text-base font-semibold text-white shadow-md transition-colors duration-200 ${
-              busy || !hasCheckedIn || hasCheckedOut ? 'opacity-50 cursor-not-allowed bg-gray-400' : 'hover:shadow-lg hover:scale-[1.02]'
+              busy || !sessionOpen ? 'opacity-50 cursor-not-allowed bg-gray-400' : 'hover:shadow-lg hover:scale-[1.02]'
             }`}
             style={{
-              background: busy || !hasCheckedIn || hasCheckedOut ? '#94A3B8' : 'linear-gradient(135deg, #EF4444, #DC2626)',
+              background: busy || !sessionOpen ? '#94A3B8' : 'linear-gradient(135deg, #EF4444, #DC2626)',
             }}
           >
             <FontAwesomeIcon icon={faTimesCircle} className="text-lg" />
-            {busy && hasCheckedIn && !hasCheckedOut ? "Processing..." : hasCheckedOut ? "Checked Out ✓" : "Check Out"}
+            {busy && sessionOpen ? "Processing..." : sessionOpen ? "Check Out" : "Check Out"}
           </button>
         </div>
 
@@ -286,7 +336,7 @@ export default function Attendance() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-gray-50/50" style={{ borderColor: "#E2E8F0" }}>
-                      {canSeeAll && (
+                      {canSeeTeam && (
                         <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: "#64748B" }}>
                           <div className="flex items-center gap-2">
                             <FontAwesomeIcon icon={faUser} className="text-[10px] text-indigo-400" />
@@ -315,7 +365,13 @@ export default function Attendance() {
                       <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: "#64748B" }}>
                         <div className="flex items-center gap-2">
                           <FontAwesomeIcon icon={faChartBar} className="text-[10px] text-indigo-400" />
-                          Worked (min)
+                          Hours worked
+                        </div>
+                      </th>
+                      <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: "#64748B" }}>
+                        <div className="flex items-center gap-2">
+                          <FontAwesomeIcon icon={faChartBar} className="text-[10px] text-indigo-400" />
+                          Daily total
                         </div>
                       </th>
                       <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: "#64748B" }}>
@@ -333,7 +389,7 @@ export default function Attendance() {
                         className="hover:bg-gray-50/60"
                         style={{ animation: `slideIn 0.3s ease-out ${index * 30}ms both` }}
                       >
-                        {canSeeAll && (
+                        {canSeeTeam && (
                           <td className="px-4 py-3 font-medium" style={{ color: "#1A1D23" }}>
                             <div className="flex items-center gap-2">
                               <div 
@@ -358,7 +414,14 @@ export default function Attendance() {
                           {fmtTime(r.checkOut)}
                         </td>
                         <td className="px-4 py-3 text-sm font-medium" style={{ color: "#1A1D23" }}>
-                          {r.workedMinutes}
+                          {formatDurationMinutes(
+                            r.checkIn && !r.checkOut
+                              ? (r.workedMinutes ?? 0) + elapsedMinutesSince(r.checkIn, clock)
+                              : r.workedMinutes
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-medium" style={{ color: "#1A1D23" }}>
+                          {formatDurationMinutes(dailyTotals[r.date.slice(0, 10)] ?? 0)}
                         </td>
                         <td className="px-4 py-3">
                           <Badge className={STATUS_BADGE[r.status]}>

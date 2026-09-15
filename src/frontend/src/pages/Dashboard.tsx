@@ -4,6 +4,7 @@ import { api, apiError } from "../lib/api";
 import { useAuth } from "../store/auth";
 import { Spinner, ErrorText, EmptyState } from "../components/ui";
 import { formatDateTime } from "../lib/format";
+import { roleLabel } from "../lib/roles";
 
 // Font Awesome imports - FIXED
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -429,7 +430,7 @@ function WelcomeHeader({ user, stats }: { user: any; stats: Stats }) {
                 {getGreeting()}, {user?.name?.split(' ')[0]}! 👋
               </h1>
               <p className="text-sm" style={{ color: colors.textSecondary }}>
-                {user?.role === "ADMIN" ? "Administrator" : user?.role === "MANAGER" ? "Manager" : "Team Member"} · {stats.totalCases} total cases
+                {roleLabel(user?.role)} · {stats.totalCases} total cases
               </p>
             </div>
           </div>
@@ -516,7 +517,7 @@ export default function Dashboard() {
       iconBg: colors.bgPrimary,
     }] : []),
     {
-      label: user?.role === "WORKER" ? "My Cases" : "Total Cases",
+      label: "Total Cases",
       value: stats.totalCases,
       to: "/cases",
       icon: faFolderOpen,

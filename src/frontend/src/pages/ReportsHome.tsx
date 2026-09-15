@@ -72,9 +72,9 @@ export default function ReportsHome() {
             </div>
           </div>
           <div className="mt-4">
-            <h2 className="text-lg font-bold" style={{ color: "#1A1D23" }}>Attendance Report</h2>
+            <h2 className="text-lg font-bold" style={{ color: "#1A1D23" }}>Time tracking report</h2>
             <p className="mt-1.5 text-sm leading-relaxed" style={{ color: "#64748B" }}>
-              Monthly present, absent, leave breakdown per employee
+              Monthly hours plus present, absent, and leave breakdown per person
             </p>
             <div className="mt-3 flex items-center gap-3 text-xs">
               <span className="flex items-center gap-1" style={{ color: "#94A3B8" }}>

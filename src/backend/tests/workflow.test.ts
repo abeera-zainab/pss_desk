@@ -185,6 +185,64 @@ describe("case & task workflow", () => {
     expect(stranger.status).toBe(403);
   });
 
+  it("stores case files in Initial OSINT, Location Analysis, or Threat Alert folders", async () => {
+    const missingFolder = await request(app)
+      .post(`/api/cases/${caseId}/files`)
+      .set(bearer(mgrT))
+      .attach("file", Buffer.from("%PDF-1.4 osint"), { filename: "osint.pdf", contentType: "application/pdf" });
+    expect(missingFolder.status).toBe(400);
+
+    const badFolder = await request(app)
+      .post(`/api/cases/${caseId}/files`)
+      .set(bearer(mgrT))
+      .field("folder", "NOTES")
+      .attach("file", Buffer.from("%PDF-1.4 osint"), { filename: "osint.pdf", contentType: "application/pdf" });
+    expect(badFolder.status).toBe(400);
+
+    const workerDenied = await request(app)
+      .post(`/api/cases/${caseId}/files`)
+      .set(bearer(workerT))
+      .field("folder", "INITIAL_OSINT")
+      .attach("file", Buffer.from("%PDF-1.4 osint"), { filename: "osint.pdf", contentType: "application/pdf" });
+    expect(workerDenied.status).toBe(403);
+
+    const osint = await request(app)
+      .post(`/api/cases/${caseId}/files`)
+      .set(bearer(mgrT))
+      .field("folder", "INITIAL_OSINT")
+      .attach("file", Buffer.from("%PDF-1.4 osint"), { filename: "osint.pdf", contentType: "application/pdf" });
+    expect(osint.status).toBe(201);
+    expect(osint.body.folder).toBe("INITIAL_OSINT");
+    expect(osint.body.filename).toBe("osint.pdf");
+
+    const location = await request(app)
+      .post(`/api/cases/${caseId}/files`)
+      .set(bearer(adminT))
+      .field("folder", "LOCATION_ANALYSIS")
+      .attach("file", Buffer.from("%PDF-1.4 loc"), { filename: "location.pdf", contentType: "application/pdf" });
+    expect(location.status).toBe(201);
+    expect(location.body.folder).toBe("LOCATION_ANALYSIS");
+
+    const threat = await request(app)
+      .post(`/api/cases/${caseId}/files`)
+      .set(bearer(mgrT))
+      .field("folder", "THREAT_ALERT")
+      .attach("file", Buffer.from("%PDF-1.4 threat"), { filename: "alert.pdf", contentType: "application/pdf" });
+    expect(threat.status).toBe(201);
+    expect(threat.body.folder).toBe("THREAT_ALERT");
+
+    const detail = await request(app).get(`/api/cases/${caseId}`).set(bearer(mgrT));
+    expect(detail.status).toBe(200);
+    const folders = (detail.body.files as { filename: string; folder: string }[]).map((f) => [f.filename, f.folder]);
+    expect(folders).toEqual(
+      expect.arrayContaining([
+        ["osint.pdf", "INITIAL_OSINT"],
+        ["location.pdf", "LOCATION_ANALYSIS"],
+        ["alert.pdf", "THREAT_ALERT"]
+      ])
+    );
+  });
+
   it("generates notifications for the worker", async () => {
     const res = await request(app).get("/api/notifications").set(bearer(workerT));
     expect(res.status).toBe(200);

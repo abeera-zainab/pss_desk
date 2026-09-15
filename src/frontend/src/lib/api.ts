@@ -18,7 +18,8 @@ import type {
   AttendanceReportDTO,
   PerformanceReportDTO,
   BoardItemDTO,
-  BoardConnectionDTO
+  BoardConnectionDTO,
+  CaseFileFolder
 } from "@shared/types";
 
 // Relative by default: the app and the API are served from the same origin (nginx
@@ -206,12 +207,18 @@ export const api = {
     form.append("file", file);
     return http.post(`/tasks/${taskId}/files`, form).then((r) => r.data);
   },
-  uploadCaseFile: (caseId: string, file: File) => {
+  uploadCaseFile: (caseId: string, file: File, folder: CaseFileFolder) => {
     const form = new FormData();
     form.append("file", file);
+    form.append("folder", folder);
     return http.post(`/cases/${caseId}/files`, form).then((r) => r.data);
   },
+  deleteCaseFile: (caseId: string, fileId: string) => {
+    return http.delete(`/cases/${caseId}/files/${fileId}`).then((r) => r.data);
+  },
   downloadUrl: (fileId: string) => `${API_BASE}/files/${fileId}/download`,
+  getFileBlob: (fileId: string) =>
+    http.get(`/files/${fileId}/download`, { responseType: "blob" }).then((r) => r.data as Blob),
   downloadFile: async (fileId: string, filename: string) => {
     const res = await http.get(`/files/${fileId}/download`, { responseType: "blob" });
     const url = URL.createObjectURL(res.data);

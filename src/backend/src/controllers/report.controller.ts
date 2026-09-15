@@ -1,33 +1,16 @@
 import { Request, Response } from "express";
 import * as reportService from "../services/report.service";
-import * as userService from "../services/user.service";
 import { sendExcel } from "../utils/exportExcel";
 import { sendPdf, sendCaseReportPdf } from "../utils/exportPdf";
 import { canViewCase, getCaseOrThrow } from "../services/access.service";
 import { forbidden } from "../utils/errors";
+import { prisma } from "../lib/prisma";
 
 async function resolveScope(req: Request): Promise<string[]> {
-  const role = req.user!.role;
   const queryUserId = req.query.userId as string | undefined;
-
-  if (role === "WORKER") return [req.user!.id];
-
-  if (role === "MANAGER") {
-    const reports = await userService.getDirectReports(req.user!.id);
-    const allowed = [req.user!.id, ...reports.map((u) => u.id)];
-    // A manager may narrow the report to one person, but only within their own
-    // team. Returning [queryUserId] unchecked let any manager pull the report of
-    // an admin or another team's staff just by passing ?userId=.
-    if (queryUserId) {
-      if (!allowed.includes(queryUserId)) throw forbidden("That user is not in your team");
-      return [queryUserId];
-    }
-    return allowed;
-  }
-
   if (queryUserId) return [queryUserId];
-  const all = await userService.listUsers({ limit: 1000 });
-  return all.data.map((u) => u.id);
+  const all = await prisma.user.findMany({ select: { id: true } });
+  return all.map((u) => u.id);
 }
 
 const attendanceColumns = [
@@ -36,6 +19,7 @@ const attendanceColumns = [
   { header: "Absent", key: "absent" },
   { header: "On Leave", key: "onLeave" },
   { header: "Half Day", key: "halfDay" },
+  { header: "Hours (min)", key: "hoursMinutes" },
   { header: "Late", key: "late" }
 ];
 

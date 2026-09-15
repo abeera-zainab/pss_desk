@@ -14,20 +14,38 @@ async function main() {
 
   const manager = await prisma.user.upsert({
     where: { email: "manager@office.local" },
-    update: {},
-    create: { name: "Manager User", email: "manager@office.local", passwordHash: password, role: "MANAGER" }
+    update: { managerId: admin.id },
+    create: {
+      name: "Manager User",
+      email: "manager@office.local",
+      passwordHash: password,
+      role: "MANAGER",
+      managerId: admin.id
+    }
   });
 
   const worker = await prisma.user.upsert({
     where: { email: "worker@office.local" },
-    update: {},
-    create: { name: "Worker User", email: "worker@office.local", passwordHash: password, role: "WORKER" }
+    update: { managerId: manager.id },
+    create: {
+      name: "Worker User",
+      email: "worker@office.local",
+      passwordHash: password,
+      role: "WORKER",
+      managerId: manager.id
+    }
   });
 
   await prisma.user.upsert({
     where: { email: "worker2@office.local" },
-    update: {},
-    create: { name: "Second Worker", email: "worker2@office.local", passwordHash: password, role: "WORKER" }
+    update: { managerId: manager.id },
+    create: {
+      name: "Second Worker",
+      email: "worker2@office.local",
+      passwordHash: password,
+      role: "WORKER",
+      managerId: manager.id
+    }
   });
 
   // Only create sample data once (keeps `npm run seed` idempotent).

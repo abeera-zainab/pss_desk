@@ -4,6 +4,7 @@ import { useAuth } from "../store/auth";
 import { useRealtimeNotifications } from "../hooks/useRealtimeNotifications";
 import NotificationBell from "./NotificationBell";
 import AttendanceWidget from "../pages/AttendanceWidget";
+import { roleLabel } from "../lib/roles";
 // Import your logo
 import pssLogo from "../assets/pss-logo-removebg-preview.png";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -37,7 +38,7 @@ const navByRole: Record<string, NavEntry[]> = {
     { to: "/cases", label: "Cases", icon: faFolderOpen },
     { to: "/users", label: "User Management", icon: faUsers },
     { label: "HR", icon: faCalendarAlt, items: [
-      { to: "/attendance", label: "Attendance" },
+      { to: "/attendance", label: "Time tracking" },
       { to: "/leave", label: "Leave" },
       { to: "/reports", label: "Reports" }
     ] },
@@ -47,9 +48,9 @@ const navByRole: Record<string, NavEntry[]> = {
   MANAGER: [
     { to: "/", label: "Dashboard", icon: faChartBar },
     { to: "/board", label: "Kanban Board", icon: faColumns },
-    { to: "/cases", label: "My Cases", icon: faFolderOpen },
+    { to: "/cases", label: "Cases", icon: faFolderOpen },
     { label: "HR", icon: faCalendarAlt, items: [
-      { to: "/attendance", label: "Attendance" },
+      { to: "/attendance", label: "Time tracking" },
       { to: "/leave", label: "Leave" },
       { to: "/reports", label: "Reports" }
     ] },
@@ -59,9 +60,9 @@ const navByRole: Record<string, NavEntry[]> = {
   WORKER: [
     { to: "/", label: "Dashboard", icon: faChartBar },
     { to: "/board", label: "Kanban Board", icon: faColumns },
-    { to: "/cases", label: "My Cases", icon: faFolderOpen },
+    { to: "/cases", label: "Cases", icon: faFolderOpen },
     { label: "HR", icon: faCalendarAlt, items: [
-      { to: "/attendance", label: "Attendance" },
+      { to: "/attendance", label: "Time tracking" },
       { to: "/leave", label: "Leave" },
       { to: "/reports", label: "Reports" }
     ] },
@@ -251,10 +252,15 @@ export default function Layout() {
   useRealtimeNotifications();
 
   const items = navByRole[user?.role || "WORKER"];
+  const isReportViewer = /\/cases\/[^/]+\/files\//.test(location.pathname);
 
   async function handleLogout() {
     await logout();
     navigate("/login");
+  }
+
+  if (isReportViewer) {
+    return <Outlet />;
   }
 
   return (
@@ -355,8 +361,8 @@ export default function Layout() {
                   Active
                 </span>
               </div>
-              <div className="font-mono text-[10px] uppercase tracking-wide" style={{ color: colors.textLight }}>
-                {user?.role}
+              <div className="text-[10px] uppercase tracking-wide" style={{ color: colors.textLight }}>
+                {roleLabel(user?.role)}
               </div>
             </div>
           </div>

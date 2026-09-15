@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { AttendanceDTO } from "@shared/types";
 import { api, apiError } from "../lib/api";
+import { formatDurationMinutes, elapsedMinutesSince } from "../lib/format";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faClock, 
@@ -25,12 +26,18 @@ export default function AttendanceWidget() {
   const [today, setToday] = useState<AttendanceDTO | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [clock, setClock] = useState(new Date());
   const ref = useRef<HTMLDivElement>(null);
 
   function load() {
     api.getTodayAttendance().then(setToday).catch(() => {});
   }
   useEffect(load, []);
+
+  useEffect(() => {
+    const id = setInterval(() => setClock(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -40,9 +47,10 @@ export default function AttendanceWidget() {
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
-  const hasCheckedIn = !!today?.checkIn;
-  const hasCheckedOut = !!today?.checkOut;
-  const workedMinutes = today?.workedMinutes || 0;
+  const sessionOpen = !!today?.checkIn && !today?.checkOut;
+  const liveMinutes = sessionOpen
+    ? (today?.workedMinutes || 0) + elapsedMinutesSince(today?.checkIn, clock)
+    : today?.workedMinutes || 0;
 
   async function handleCheckIn() {
     setError("");
@@ -70,8 +78,8 @@ export default function AttendanceWidget() {
     }
   }
 
-  const checkInDisabled = busy || hasCheckedIn;
-  const checkOutDisabled = busy || !hasCheckedIn || hasCheckedOut;
+  const checkInDisabled = busy || sessionOpen;
+  const checkOutDisabled = busy || !sessionOpen;
 
   return (
     <div className="relative" ref={ref}>
@@ -81,8 +89,8 @@ export default function AttendanceWidget() {
         style={{ background: "none", border: "none" }}
       >
         <FontAwesomeIcon icon={faClock} className="text-base" />
-        Attendance
-        {hasCheckedIn && !hasCheckedOut && (
+        Time tracking
+        {sessionOpen && (
           <span className="flex h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
         )}
       </button>
@@ -108,7 +116,7 @@ export default function AttendanceWidget() {
               </div>
               <div>
                 <div className="text-sm font-semibold" style={{ color: "#1A1D23" }}>
-                  Today's Attendance
+                  Today's hours
                 </div>
                 <div className="text-[10px] font-medium" style={{ color: "#94A3B8" }}>
                   <FontAwesomeIcon icon={faCalendarDay} className="mr-1 text-[8px]" />
@@ -141,10 +149,10 @@ export default function AttendanceWidget() {
             <div className="rounded-xl border px-2 py-2.5 text-center transition-all duration-200 hover:shadow-sm" style={{ borderColor: "#E2E8F0" }}>
               <div className="text-[9px] font-medium uppercase tracking-wider flex items-center justify-center gap-1" style={{ color: "#94A3B8" }}>
                 <FontAwesomeIcon icon={faHourglassHalf} className="text-[6px] text-indigo-400" />
-                Worked
+                Hours
               </div>
               <div className="mt-0.5 font-mono text-sm font-bold" style={{ color: "#1A1D23" }}>
-                {workedMinutes}m
+                {formatDurationMinutes(liveMinutes)}
               </div>
             </div>
           </div>
@@ -165,7 +173,7 @@ export default function AttendanceWidget() {
                 }}
               >
                 <FontAwesomeIcon icon={faCheckCircle} className="text-[10px]" />
-                {busy && !hasCheckedIn ? "..." : hasCheckedIn ? "Checked In" : "Check In"}
+                {busy && !sessionOpen ? "..." : sessionOpen ? "Checked In" : "Check In"}
               </button>
               <button
                 onClick={handleCheckOut}
@@ -180,7 +188,7 @@ export default function AttendanceWidget() {
                 }}
               >
                 <FontAwesomeIcon icon={faTimesCircle} className="text-[10px]" />
-                {busy && hasCheckedIn && !hasCheckedOut ? "..." : hasCheckedOut ? "Checked Out" : "Check Out"}
+                {busy && sessionOpen ? "..." : "Check Out"}
               </button>
             </div>
 

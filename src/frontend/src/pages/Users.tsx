@@ -3,6 +3,7 @@ import type { Role, TaskType, UserDTO } from "@shared/types";
 import { api, apiError } from "../lib/api";
 import { Badge, Modal, ErrorText, Spinner } from "../components/ui";
 import { formatDate } from "../lib/format";
+import { ROLE_LABEL } from "../lib/roles";
 import { colors, card, label, input, heading, tableHead, rowHover } from "../lib/theme";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
@@ -55,23 +56,28 @@ const ROLE_ICON: Record<Role, any> = {
 };
 
 const DOMAIN_OPTIONS: { value: TaskType; label: string }[] = [
-  { value: "FR", label: "Face Recognition" },
-  { value: "GEO_LOCATION", label: "Geo Location" },
-  { value: "CYBER_INT", label: "Cyber Intelligence" }
+  { value: "PSS_DEFENSIVE", label: "PSS Defensive" },
+  { value: "PSS_OPS", label: "PSS OPS" },
+  { value: "PSS_OFFENSIVE", label: "PSS Offensive" },
+  { value: "PSS_PRODUCT", label: "PSS Product" }
 ];
 
-const DOMAIN_LABEL: Record<TaskType, string> = {
-  FR: "FR",
-  GEO_LOCATION: "Geo",
-  CYBER_INT: "Cyber"
-};
+type UserTab = "ALL" | Role | TaskType;
+
+const USER_TABS: { value: UserTab; label: string }[] = [
+  { value: "ALL", label: "All" },
+  { value: "ADMIN", label: "Admin" },
+  { value: "MANAGER", label: "Team Leads" },
+  { value: "WORKER", label: "Team" },
+  ...DOMAIN_OPTIONS
+];
 
 export default function Users() {
   const [users, setUsers] = useState<UserDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState<Role | "ALL">("ALL");
+  const [activeTab, setActiveTab] = useState<UserTab>("ALL");
 
   function load() {
     setLoading(true);
@@ -99,11 +105,8 @@ export default function Users() {
 
   async function changeRole(u: UserDTO, role: Role) {
     try {
-      await api.updateUser(u.id, { role });
-      // Update local state instantly - no reload
-      setUsers(prev => prev.map(user => 
-        user.id === u.id ? { ...user, role } : user
-      ));
+      await api.updateUser(u.id, { role, managerId: role === "ADMIN" ? null : u.managerId ?? null });
+      setUsers((prev) => prev.map((user) => (user.id === u.id ? { ...user, role } : user)));
     } catch (e) {
       alert(apiError(e));
       // Revert on error
@@ -127,11 +130,15 @@ export default function Users() {
     }
   }
 
-  const filteredUsers = users.filter(user => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesRole = roleFilter === "ALL" || user.role === roleFilter;
-    return matchesSearch && matchesRole;
+  const filteredUsers = users.filter((user) => {
+    const matchesSearch =
+      user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const isRoleTab = activeTab === "ALL" || activeTab === "ADMIN" || activeTab === "MANAGER" || activeTab === "WORKER";
+    const matchesTab = isRoleTab
+      ? activeTab === "ALL" || user.role === activeTab
+      : user.domains.includes(activeTab);
+    return matchesSearch && matchesTab;
   });
 
   const totalUsers = users.length;
@@ -212,21 +219,21 @@ export default function Users() {
           </div>
           
           <div className="flex items-center gap-2">
-            <div className="flex rounded-2xl border bg-white p-1" style={{ borderColor: "#E2E8F0" }}>
-              {["ALL", "ADMIN", "MANAGER", "WORKER"].map((role) => (
+            <div className="flex max-w-full flex-wrap rounded-2xl border bg-white p-1" style={{ borderColor: "#E2E8F0" }}>
+              {USER_TABS.map((tab) => (
                 <button
-                  key={role}
-                  onClick={() => setRoleFilter(role as Role | "ALL")}
+                  key={tab.value}
+                  onClick={() => setActiveTab(tab.value)}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-medium transition-colors duration-200 ${
-                    roleFilter === role 
+                    activeTab === tab.value 
                       ? "text-white shadow-sm" 
                       : "text-gray-600 hover:bg-gray-50"
                   }`}
                   style={{
-                    background: roleFilter === role ? 'linear-gradient(135deg, #6366F1, #8B5CF6)' : 'transparent',
+                    background: activeTab === tab.value ? 'linear-gradient(135deg, #6366F1, #8B5CF6)' : 'transparent',
                   }}
                 >
-                  {role === "ALL" ? "All" : role}
+                  {tab.label}
                 </button>
               ))}
             </div>
@@ -327,13 +334,13 @@ export default function Users() {
                           style={{ borderColor: colors.border }}
                         >
                           {(["ADMIN", "MANAGER", "WORKER"] as Role[]).map((r) => (
-                            <option key={r}>{r}</option>
+                            <option key={r} value={r}>{ROLE_LABEL[r]}</option>
                           ))}
                         </select>
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      {u.role === "WORKER" ? (
+                      {u.role === "WORKER" || u.role === "MANAGER" ? (
                         <div className="flex flex-wrap gap-1">
                           {DOMAIN_OPTIONS.map((d) => {
                             const active = u.domains.includes(d.value);
@@ -348,7 +355,7 @@ export default function Users() {
                                 }`}
                                 title={d.label}
                               >
-                                {DOMAIN_LABEL[d.value]}
+                                {d.label}
                               </button>
                             );
                           })}
@@ -423,13 +430,22 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
   const [role, setRole] = useState<Role>("WORKER");
   const [managerId, setManagerId] = useState<string>("");
   const [domains, setDomains] = useState<TaskType[]>([]);
-  const [managers, setManagers] = useState<{ id: string; name: string }[]>([]);
+  const [reportsTo, setReportsTo] = useState<{ id: string; name: string }[]>([]);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    api.getManagers().then(setManagers);
-  }, []);
+    setManagerId("");
+    if (role === "ADMIN") {
+      setReportsTo([]);
+      return;
+    }
+    if (role === "MANAGER") {
+      api.getUsers({ role: "ADMIN", limit: 100 }).then((r) => setReportsTo(r.data));
+      return;
+    }
+    api.getManagers().then(setReportsTo);
+  }, [role]);
 
   function toggleDomain(domain: TaskType) {
     setDomains((prev) => (prev.includes(domain) ? prev.filter((d) => d !== domain) : [...prev, domain]));
@@ -445,8 +461,8 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
         email,
         password,
         role,
-        managerId: managerId || undefined,
-        domains: role === "WORKER" ? domains : undefined
+        managerId: role === "ADMIN" ? undefined : managerId || undefined,
+        domains: role === "WORKER" || role === "MANAGER" ? domains : undefined
       });
       onCreated();
     } catch (err) {
@@ -524,37 +540,40 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
             onChange={(e) => setRole(e.target.value as Role)}
           >
             {(["ADMIN", "MANAGER", "WORKER"] as Role[]).map((r) => (
-              <option key={r}>{r}</option>
+              <option key={r} value={r}>{ROLE_LABEL[r]}</option>
             ))}
           </select>
         </label>
 
+        {role !== "ADMIN" && (
         <label className={label}>
           <span className="flex items-center gap-2 text-sm font-semibold" style={{ color: "#1A1D23" }}>
             <div className="flex h-6 w-6 items-center justify-center rounded-lg" style={{ background: "#EEF2FF" }}>
               <FontAwesomeIcon icon={faUserTie} className="text-xs text-indigo-500" />
             </div>
-            Reports To (optional)
+            Reports to {role === "MANAGER" ? "(Admin)" : "(Team Lead)"}
           </span>
           <select 
             className={`${input} mt-1.5 rounded-xl border-gray-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-colors duration-200`} 
             value={managerId} 
             onChange={(e) => setManagerId(e.target.value)}
+            required
           >
-            <option value="">None</option>
-            {managers.map((m) => (
+            <option value="">Select…</option>
+            {reportsTo.map((m) => (
               <option key={m.id} value={m.id}>{m.name}</option>
             ))}
           </select>
         </label>
+        )}
 
-        {role === "WORKER" && (
+        {(role === "WORKER" || role === "MANAGER") && (
           <div className={label}>
             <span className="flex items-center gap-2 text-sm font-semibold" style={{ color: "#1A1D23" }}>
               <div className="flex h-6 w-6 items-center justify-center rounded-lg" style={{ background: "#EEF2FF" }}>
                 <FontAwesomeIcon icon={faLayerGroup} className="text-xs text-indigo-500" />
               </div>
-              Domains (elective specialization)
+              Domain
             </span>
             <div className="mt-2 flex flex-wrap gap-2">
               {DOMAIN_OPTIONS.map((d) => {

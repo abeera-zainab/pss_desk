@@ -228,6 +228,12 @@ export default function Leave() {
                       Status
                     </div>
                   </th>
+                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: "#64748B" }}>
+                    Reason
+                  </th>
+                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: "#64748B" }}>
+                    Review note
+                  </th>
                   {canReview && (
                     <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider" style={{ color: "#64748B" }}>
                       Actions
@@ -275,9 +281,16 @@ export default function Leave() {
                         {r.status}
                       </Badge>
                     </td>
+                    <td className="px-4 py-3 text-xs max-w-[14rem]" style={{ color: "#64748B" }}>
+                      {r.reason || "—"}
+                    </td>
+                    <td className="px-4 py-3 text-xs max-w-[14rem]" style={{ color: r.status === "REJECTED" ? "#B91C1C" : "#64748B" }}>
+                      {r.status === "REJECTED" && r.reviewComment ? r.reviewComment : "—"}
+                    </td>
                     {canReview && (
                       <td className="px-4 py-3 text-right">
-                        {r.status === "PENDING" && (
+                        {r.status === "PENDING" &&
+                          (user?.role === "ADMIN" || r.user?.managerId === user?.id) && (
                           <div className="flex items-center justify-end gap-2">
                             <button
                               className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-emerald-600 transition-colors duration-200 hover:bg-emerald-50"

@@ -72,7 +72,11 @@ export type LeaveStatus = (typeof LeaveStatus)[keyof typeof LeaveStatus];
 export const TaskType = {
   FR: "FR",
   GEO_LOCATION: "GEO_LOCATION",
-  CYBER_INT: "CYBER_INT"
+  CYBER_INT: "CYBER_INT",
+  PSS_DEFENSIVE: "PSS_DEFENSIVE",
+  PSS_OPS: "PSS_OPS",
+  PSS_OFFENSIVE: "PSS_OFFENSIVE",
+  PSS_PRODUCT: "PSS_PRODUCT"
 } as const;
 export type TaskType = (typeof TaskType)[keyof typeof TaskType];
 
@@ -82,6 +86,13 @@ export const BoardItemType = {
   NOTE: "NOTE"
 } as const;
 export type BoardItemType = (typeof BoardItemType)[keyof typeof BoardItemType];
+
+export const CaseFileFolder = {
+  INITIAL_OSINT: "INITIAL_OSINT",
+  LOCATION_ANALYSIS: "LOCATION_ANALYSIS",
+  THREAT_ALERT: "THREAT_ALERT"
+} as const;
+export type CaseFileFolder = (typeof CaseFileFolder)[keyof typeof CaseFileFolder];
 
 // ---------- User DTOs ----------
 
@@ -199,6 +210,7 @@ export interface FileDTO {
   uploader?: UserDTO;
   taskId?: string;
   caseId?: string;
+  folder?: CaseFileFolder | null;
   createdAt: string;
 }
 
@@ -284,6 +296,7 @@ export interface AttendanceReportRow {
   onLeave: number;
   halfDay: number;
   late: number;
+  hoursMinutes: number;
 }
 
 export interface PerformanceReportDTO {
@@ -328,5 +341,6 @@ export interface CaseFileDTO {
   uploadedBy: string;
   uploader?: UserDTO;
   caseId: string;
+  folder?: CaseFileFolder | null;
   createdAt: string;
 }

@@ -10,8 +10,8 @@ export async function listManagers(_req: Request, res: Response) {
   res.json(await userService.listManagers());
 }
 
-export async function listWorkers(_req: Request, res: Response) {
-  res.json(await userService.listWorkers());
+export async function listWorkers(req: Request, res: Response) {
+  res.json(await userService.listWorkers(req.user!));
 }
 
 export async function create(req: Request, res: Response) {

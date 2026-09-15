@@ -6,18 +6,18 @@ import { AuthUser } from "../middleware/auth";
 export async function dashboard(user: AuthUser) {
   // Build a task filter that matches the role's visibility.
   const taskWhere: Prisma.TaskWhereInput = {};
-  const caseWhere: Prisma.CaseWhereInput = {};
   if (user.role === "MANAGER") {
-    caseWhere.assignedManagerId = user.id;
     taskWhere.case = { assignedManagerId: user.id };
   } else if (user.role === "WORKER") {
-    taskWhere.assignedUserId = user.id;
-    caseWhere.tasks = { some: { assignedUserId: user.id } };
+    taskWhere.OR = [
+      { assignedUserId: user.id },
+      { assignments: { some: { userId: user.id } } }
+    ];
   }
 
   const [totalUsers, totalCases, activeTasks, completedTasks, pendingApprovals] = await Promise.all([
     user.role === "ADMIN" ? prisma.user.count() : Promise.resolve(0),
-    prisma.case.count({ where: caseWhere }),
+    prisma.case.count(),
     prisma.task.count({
       where: { ...taskWhere, status: { in: ["PENDING", "IN_PROGRESS", "SUBMITTED", "UNDER_REVIEW"] } }
     }),

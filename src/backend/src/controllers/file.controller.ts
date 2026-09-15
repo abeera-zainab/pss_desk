@@ -4,7 +4,9 @@ import { badRequest } from "../utils/errors";
 
 export async function uploadToCase(req: Request, res: Response) {
   if (!req.file) throw badRequest("No file uploaded");
-  res.status(201).json(await fileService.uploadCaseFile(req.user!, req.params.id, req.file));
+  res.status(201).json(
+    await fileService.uploadCaseFile(req.user!, req.params.id, req.file, req.body.folder)
+  );
 }
 
 export async function uploadToTask(req: Request, res: Response) {
@@ -20,4 +22,8 @@ export async function download(req: Request, res: Response) {
   // evidence can never be rendered as a document in the app's own origin.
   res.type(mimetype);
   res.download(absolute, filename);
+}
+
+export async function deleteCaseFile(req: Request, res: Response) {
+  res.json(await fileService.deleteCaseFile(req.user!, req.params.id, req.params.fileId));
 }

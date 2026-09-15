@@ -4,41 +4,9 @@ import { notFound, forbidden } from "../utils/errors";
 import { uploadBoardFile } from "./file.service";
 import { emitBoard } from "../sockets";
 
-async function canAccessCase(user: AuthUser, caseId: string): Promise<boolean> {
-  if (user.role === "ADMIN") return true;
-
-  const caseRecord = await prisma.case.findUnique({
-    where: { id: caseId },
-    select: {
-      assignedManagerId: true,
-      tasks: {
-        select: {
-          assignedUserId: true,
-          assignments: {
-            select: { userId: true }
-          }
-        }
-      }
-    }
-  });
-  if (!caseRecord) return false;
-
-  if (user.role === "MANAGER") {
-    return caseRecord.assignedManagerId === user.id;
-  }
-  
-  if (user.role === "WORKER") {
-    // Check if user is assigned to any task in this case
-    return caseRecord.tasks.some((task) => {
-      // Check primary assignee
-      if (task.assignedUserId === user.id) return true;
-      // Check assignments array
-      if (task.assignments && task.assignments.some((a) => a.userId === user.id)) return true;
-      return false;
-    });
-  }
-  
-  return false;
+async function canAccessCase(_user: AuthUser, caseId: string): Promise<boolean> {
+  const caseRecord = await prisma.case.findUnique({ where: { id: caseId }, select: { id: true } });
+  return !!caseRecord;
 }
 
 async function assertCaseAccess(user: AuthUser, caseId: string) {

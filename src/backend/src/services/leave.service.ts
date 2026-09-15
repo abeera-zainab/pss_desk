@@ -43,7 +43,7 @@ export async function listLeaveRequests(params: {
   return prisma.leaveRequest.findMany({
     where,
     orderBy: { createdAt: "desc" },
-    include: { user: { select: { id: true, name: true } } }
+    include: { user: { select: { id: true, name: true, managerId: true } } }
   });
 }
 

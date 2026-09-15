@@ -11,12 +11,13 @@ export async function checkIn(userId: string) {
   const existing = await prisma.attendance.findUnique({
     where: { userId_date: { userId, date } }
   });
-  if (existing?.checkIn) throw conflict("Already checked in today");
+  const openSession = !!(existing?.checkIn && !existing.checkOut);
+  if (openSession) throw conflict("Already checked in");
 
   if (existing) {
     return prisma.attendance.update({
       where: { id: existing.id },
-      data: { checkIn: new Date(), status: "PRESENT" }
+      data: { checkIn: new Date(), checkOut: null, status: "PRESENT" }
     });
   }
   return prisma.attendance.create({
@@ -30,11 +31,12 @@ export async function checkOut(userId: string) {
     where: { userId_date: { userId, date } }
   });
   if (!existing?.checkIn) throw conflict("You must check in before checking out");
-  if (existing.checkOut) throw conflict("Already checked out today");
+  if (existing.checkOut) throw conflict("Already checked out");
 
-  const workedMinutes = Math.round(
+  const sessionMinutes = Math.round(
     (new Date().getTime() - existing.checkIn.getTime()) / 60000
   );
+  const workedMinutes = (existing.workedMinutes ?? 0) + sessionMinutes;
 
   return prisma.attendance.update({
     where: { id: existing.id },

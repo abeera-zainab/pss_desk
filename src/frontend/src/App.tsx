@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import KanbanBoard from "./pages/KanbanBoard";
 import Cases from "./pages/Cases";
 import CaseDetail from "./pages/CaseDetail";
+import CaseReportViewer from "./pages/CaseReportViewer";
 import TaskDetail from "./pages/TaskDetail";
 import Users from "./pages/Users";
 import Notifications from "./pages/Notifications";
@@ -61,6 +62,7 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="board" element={<KanbanBoard />} />
         <Route path="cases" element={<Cases />} />
+        <Route path="cases/:id/files/:fileId" element={<CaseReportViewer />} />
         <Route path="cases/:id" element={<CaseDetail />} />
         <Route path="tasks/:id" element={<TaskDetail />} />
         <Route path="attendance" element={<Attendance />} />

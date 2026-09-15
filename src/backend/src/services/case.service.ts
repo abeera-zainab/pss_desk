@@ -22,7 +22,10 @@ const caseInclude = {
       assignments: { select: { user: { select: { id: true, name: true } } } }
     }
   },
-  files: true
+  files: {
+    where: { boardItem: { is: null } },
+    orderBy: { createdAt: "desc" }
+  }
 } satisfies Prisma.CaseInclude;
 
 export async function createCase(
@@ -101,22 +104,12 @@ export async function createCase(
   return kase;
 }
 
-export async function listCases(user: AuthUser, query: any) {
+export async function listCases(_user: AuthUser, query: any) {
   const p = parsePagination(query);
   const where: Prisma.CaseWhereInput = {};
 
   if (query.status) where.status = query.status;
   if (query.priority) where.priority = query.priority;
-
-  if (user.role === "MANAGER") {
-    where.assignedManagerId = user.id;
-  } else if (user.role === "WORKER") {
-    where.tasks = {
-      some: {
-        OR: [{ assignedUserId: user.id }, { assignments: { some: { userId: user.id } } }]
-      }
-    };
-  }
 
   const [data, total] = await Promise.all([
     prisma.case.findMany({

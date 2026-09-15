@@ -16,7 +16,8 @@ export const createUserSchema = z.object({
     email: z.string().email(),
     password: z.string().min(8, "Password must be at least 8 characters"),
     role,
-      managerId: z.string().uuid().nullable().optional() , domains: z.array(z.enum(["FR", "GEO_LOCATION", "CYBER_INT"])).optional()  
+      managerId: z.string().uuid().nullable().optional(),
+      domains: z.array(z.enum(["FR", "GEO_LOCATION", "CYBER_INT", "PSS_DEFENSIVE", "PSS_OPS", "PSS_OFFENSIVE", "PSS_PRODUCT"])).optional()  
   })
 });
 
@@ -27,7 +28,8 @@ export const updateUserSchema = z.object({
     role: role.optional(),
     isActive: z.boolean().optional(),
     password: z.string().min(8).optional(), 
-    managerId: z.string().uuid().nullable().optional(),domains: z.array(z.enum(["FR", "GEO_LOCATION", "CYBER_INT"])).optional()
+    managerId: z.string().uuid().nullable().optional(),
+    domains: z.array(z.enum(["FR", "GEO_LOCATION", "CYBER_INT", "PSS_DEFENSIVE", "PSS_OPS", "PSS_OFFENSIVE", "PSS_PRODUCT"])).optional()
   })
 });
 

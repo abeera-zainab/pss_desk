@@ -37,6 +37,25 @@ async function loadTask(id: string) {
   return task;
 }
 
+async function assertCanAssignUsers(actor: AuthUser, userIds: string[]) {
+  const uniqueIds = [...new Set(userIds)];
+  const assignees = await prisma.user.findMany({
+    where: { id: { in: uniqueIds } }
+  });
+  if (assignees.length !== uniqueIds.length) {
+    throw badRequest("One or more users are invalid or inactive");
+  }
+
+  for (const assignee of assignees) {
+    if (!assignee.isActive) throw badRequest("Assigned user must be active");
+    if (assignee.role === "ADMIN") throw badRequest("Tasks cannot be assigned to an Admin");
+    if (actor.role === "ADMIN") continue;
+    if (actor.role === "MANAGER" && assignee.managerId !== actor.id) {
+      throw forbidden("You can only assign tasks to your own team");
+    }
+  }
+}
+
 export async function createTask(
   user: AuthUser,
   input: {
@@ -54,8 +73,7 @@ export async function createTask(
   const kase = await getCaseOrThrow(input.caseId);
   if (!canManageCase(user, kase)) throw forbidden("You can only add tasks to your own cases");
 
-  const assignee = await prisma.user.findUnique({ where: { id: input.assignedUserId } });
-  if (!assignee || !assignee.isActive) throw badRequest("Assigned user must be active");
+  await assertCanAssignUsers(user, [input.assignedUserId]);
 
   let status: TaskStatus = "PENDING";
   if (input.dependsOnTaskId) {
@@ -220,9 +238,9 @@ export async function changeStatus(user: AuthUser, id: string, to: TaskStatus) {
 export async function assignTask(user: AuthUser, id: string, assignedUserId: string) {
   const task = await loadTask(id);
   if (!canManageCase(user, task.case)) throw forbidden();
-
+  await assertCanAssignUsers(user, [assignedUserId]);
   const assignee = await prisma.user.findUnique({ where: { id: assignedUserId } });
-  if (!assignee || !assignee.isActive) throw badRequest("Assigned user must be active");
+  if (!assignee) throw badRequest("Assigned user must be active");
 
   // Check if already assigned
   const existingAssignment = await prisma.taskAssignment.findUnique({
@@ -275,18 +293,11 @@ export async function assignMultipleUsers(
 
   const task = await loadTask(taskId);
   if (!canManageCase(user, task.case)) throw forbidden();
+  await assertCanAssignUsers(user, userIds);
 
-  // Validate all users exist and are active
   const validUsers = await prisma.user.findMany({
-    where: {
-      id: { in: userIds },
-      isActive: true
-    }
+    where: { id: { in: userIds } }
   });
-
-  if (validUsers.length !== userIds.length) {
-    throw badRequest("One or more users are invalid or inactive");
-  }
 
   // Remove existing assignments for this task
   await prisma.taskAssignment.deleteMany({
@@ -357,8 +368,7 @@ export async function editTask(
   if (!canManageCase(user, task.case)) throw forbidden("You can only edit tasks in your own cases");
 
   if (input.assignedUserId) {
-    const assignee = await prisma.user.findUnique({ where: { id: input.assignedUserId } });
-    if (!assignee || !assignee.isActive) throw badRequest("Assigned user must be active");
+    await assertCanAssignUsers(user, [input.assignedUserId]);
   }
 
   const data: Prisma.TaskUncheckedUpdateInput = {};

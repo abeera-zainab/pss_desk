@@ -1,7 +1,8 @@
 import bcrypt from "bcryptjs";
 import { Prisma, TaskType } from "@prisma/client";
 import { prisma } from "../lib/prisma";
-import { conflict, notFound } from "../utils/errors";
+import { AuthUser } from "../middleware/auth";
+import { badRequest, conflict, notFound } from "../utils/errors";
 import { parsePagination, paginated } from "../utils/pagination";
 import { revokeAllSessions } from "./auth.service";
 
@@ -15,6 +16,36 @@ const publicSelect = {
   managerId: true,
   domains: true
 } as const;
+
+async function assertReportingChain(
+  role: "ADMIN" | "MANAGER" | "WORKER",
+  managerId: string | null | undefined
+) {
+  if (role === "ADMIN") {
+    if (managerId) throw badRequest("Admins do not report to anyone");
+    return;
+  }
+
+  if (!managerId) {
+    throw badRequest(
+      role === "MANAGER"
+        ? "Team Leads must report to an Admin"
+        : "Team members must report to a Team Lead"
+    );
+  }
+
+  const manager = await prisma.user.findUnique({ where: { id: managerId } });
+  if (!manager || !manager.isActive) {
+    throw badRequest("Reports-to user must be an active account");
+  }
+
+  if (role === "MANAGER" && manager.role !== "ADMIN") {
+    throw badRequest("Team Leads must report to an Admin");
+  }
+  if (role === "WORKER" && manager.role !== "MANAGER") {
+    throw badRequest("Team members must report to a Team Lead");
+  }
+}
 
 export async function listUsers(query: any) {
   const p = parsePagination(query);
@@ -45,6 +76,9 @@ export async function createUser(input: {
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
   if (existing) throw conflict("A user with that email already exists");
 
+  const managerId = input.role === "ADMIN" ? null : input.managerId ?? null;
+  await assertReportingChain(input.role, managerId);
+
   const passwordHash = await bcrypt.hash(input.password, 10);
   return prisma.user.create({
     data: {
@@ -52,7 +86,7 @@ export async function createUser(input: {
       email: input.email,
       passwordHash,
       role: input.role,
-      managerId: input.managerId ?? null,
+      managerId,
       domains: input.domains ?? []
     },
     select: publicSelect
@@ -70,13 +104,27 @@ export async function updateUser(
     domains?: TaskType[];
   }
 ) {
+  const existing = await prisma.user.findUnique({ where: { id } });
+  if (!existing) throw notFound("User not found");
+
   const data: Prisma.UserUncheckedUpdateInput = {};
   if (input.name !== undefined) data.name = input.name;
   if (input.role !== undefined) data.role = input.role;
   if (input.isActive !== undefined) data.isActive = input.isActive;
   if (input.password) data.passwordHash = await bcrypt.hash(input.password, 10);
-  if (input.managerId !== undefined) data.managerId = input.managerId;
   if (input.domains !== undefined) data.domains = input.domains;
+
+  if (input.role !== undefined || input.managerId !== undefined) {
+    const nextRole = input.role ?? existing.role;
+    const nextManagerId =
+      nextRole === "ADMIN"
+        ? null
+        : input.managerId !== undefined
+          ? input.managerId
+          : existing.managerId;
+    await assertReportingChain(nextRole, nextManagerId);
+    data.managerId = nextManagerId;
+  }
 
   try {
     const updated = await prisma.user.update({ where: { id }, data, select: publicSelect });
@@ -116,10 +164,17 @@ export async function listManagers() {
   });
 }
 
-// Workers list (for manager task-assignment dropdowns).
-export async function listWorkers() {
+// Assignees for task dropdowns: Admin sees Team + Team Leads; Team Leads see only their Team.
+export async function listWorkers(actor: AuthUser) {
+  const where: Prisma.UserWhereInput = { isActive: true };
+  if (actor.role === "ADMIN") {
+    where.role = { in: ["WORKER", "MANAGER"] };
+  } else {
+    where.role = "WORKER";
+    where.managerId = actor.id;
+  }
   return prisma.user.findMany({
-    where: { role: "WORKER", isActive: true },
+    where,
     select: publicSelect,
     orderBy: { name: "asc" }
   });

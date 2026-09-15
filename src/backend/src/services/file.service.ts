@@ -2,6 +2,7 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 import { v4 as uuidv4 } from "uuid";
+import { CaseFileFolder } from "@prisma/client";
 import { prisma } from "../lib/prisma";
 import { AuthUser } from "../middleware/auth";
 import { badRequest, forbidden, notFound } from "../utils/errors";
@@ -32,7 +33,13 @@ const ALLOWED_MIME = new Map<string, string>([
   ["video/quicktime", ".mov"],
   ["video/webm", ".webm"],
   ["application/zip", ".zip"],
-  ["application/x-zip-compressed", ".zip"]
+  ["application/x-zip-compressed", ".zip"],
+  ["text/plain", ".txt"],
+  ["text/csv", ".csv"],
+  ["text/x-csv", ".csv"],
+  ["application/csv", ".csv"],
+  ["application/vnd.ms-excel", ".csv"],
+  ["application/json", ".json"]
 ]);
 
 // Tolerates "500" and "500MB" alike; falls back to 20 MB if unset or unparseable.
@@ -58,7 +65,27 @@ export function makeUploader(subfolder: "cases" | "tasks" | "reports" | "profile
     limits: { fileSize: maxBytes() },
     fileFilter: (_req, file, cb) => {
       if (ALLOWED_MIME.has(file.mimetype)) return cb(null, true);
-      cb(badRequest("File type not allowed. Allowed: PDF, DOCX, XLSX, PNG, JPG, MP4, MOV, WEBM, ZIP") as any);
+      const ext = path.extname(file.originalname).toLowerCase();
+      const extMimeMap: Record<string, string> = {
+        ".pdf": "application/pdf",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ".png": "image/png",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".mp4": "video/mp4",
+        ".mov": "video/quicktime",
+        ".webm": "video/webm",
+        ".zip": "application/zip",
+        ".txt": "text/plain",
+        ".csv": "text/csv",
+        ".json": "application/json"
+      };
+      if (extMimeMap[ext]) {
+        file.mimetype = extMimeMap[ext];
+        return cb(null, true);
+      }
+      cb(badRequest("File type not allowed. Allowed: PDF, DOCX, XLSX, PNG, JPG, MP4, MOV, WEBM, ZIP, TXT, CSV, JSON") as any);
     }
   });
 }
@@ -104,15 +131,20 @@ export async function uploadTaskFile(user: AuthUser, taskId: string, file: Expre
   return publicFile(record);
 }
 
-export async function uploadCaseFile(user: AuthUser, caseId: string, file: Express.Multer.File) {
+export async function uploadCaseFile(
+  user: AuthUser,
+  caseId: string,
+  file: Express.Multer.File,
+  folder: CaseFileFolder
+) {
   const kase = await prisma.case.findUnique({ where: { id: caseId } });
   if (!kase) throw notFound("Case not found");
   if (!canManageCase(user, kase)) throw forbidden("You cannot upload to this case");
 
   const record = await prisma.file.create({
-    data: { ...toRecord(file, "cases"), caseId, uploadedBy: user.id }
+    data: { ...toRecord(file, "cases"), caseId, folder, uploadedBy: user.id }
   });
-  await logActivity(user.id, "FILE_UPLOADED", "FILE", record.id, `case:${caseId}`);
+  await logActivity(user.id, "FILE_UPLOADED", "FILE", record.id, `case:${caseId}:${folder}`);
   emitToCase(caseId, "file:new", record);
   return publicFile(record);
 }
@@ -125,6 +157,29 @@ export async function uploadBoardFile(user: AuthUser, caseId: string, file: Expr
   });
   await logActivity(user.id, "FILE_UPLOADED", "FILE", record.id, `board:${caseId}`);
   return publicFile(record);
+}
+
+export async function deleteCaseFile(user: AuthUser, caseId: string, fileId: string) {
+  const kase = await prisma.case.findUnique({ where: { id: caseId } });
+  if (!kase) throw notFound("Case not found");
+  if (!canManageCase(user, kase)) throw forbidden("You cannot delete files from this case");
+
+  const file = await prisma.file.findFirst({ where: { id: fileId, caseId } });
+  if (!file) throw notFound("File not found");
+
+  const absolute = path.resolve(STORAGE_ROOT, file.filepath);
+  if (fs.existsSync(absolute)) {
+    try {
+      fs.unlinkSync(absolute);
+    } catch {
+      // ignore unlink error if already removed
+    }
+  }
+
+  await prisma.file.delete({ where: { id: fileId } });
+  await logActivity(user.id, "FILE_DELETED", "FILE", fileId, `case:${caseId}:${file.folder ?? "unfiled"}`);
+  emitToCase(caseId, "file:delete", { id: fileId, caseId });
+  return { success: true };
 }
 
 export async function downloadFile(user: AuthUser, id: string) {
@@ -162,6 +217,7 @@ function publicFile(f: {
   uploadedBy: string;
   taskId: string | null;
   caseId: string | null;
+  folder?: CaseFileFolder | null;
   createdAt: Date;
 }) {
   return {
@@ -172,6 +228,7 @@ function publicFile(f: {
     uploadedBy: f.uploadedBy,
     taskId: f.taskId,
     caseId: f.caseId,
+    folder: f.folder ?? null,
     createdAt: f.createdAt
   };
 }
