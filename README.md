@@ -18,8 +18,15 @@ docker compose up -d --build
 
 Open **http://localhost:11802**.
 
-The first start applies all database migrations automatically. To create the demo
-accounts as well, set `SEED_ON_START=true` before the first run.
+On a **new** machine with an empty `DATA_ROOT`, Postgres loads `seed/database.sql`
+so cases, users, and file records are already there. That dump only runs once,
+when the database directory is first created.
+
+The first start also applies all database migrations. To create the demo
+accounts on an empty dump-less database, set `SEED_ON_START=true` before the first run.
+
+Uploaded evidence files live in `DATA_ROOT/storage` and are **not** in Git.
+Copy that folder separately if you need the PDFs themselves, not just the database rows.
 
 ---
 
