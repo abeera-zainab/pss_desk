@@ -9,7 +9,7 @@ async function main() {
   const admin = await prisma.user.upsert({
     where: { email: "admin@office.local" },
     update: {},
-    create: { name: "Admin User", email: "admin@office.local", passwordHash: password, role: "ADMIN" }
+    create: { name: "Admin User", username: "admin", email: "admin@office.local", passwordHash: password, role: "ADMIN" }
   });
 
   const manager = await prisma.user.upsert({
@@ -17,6 +17,7 @@ async function main() {
     update: { managerId: admin.id },
     create: {
       name: "Manager User",
+      username: "manager",
       email: "manager@office.local",
       passwordHash: password,
       role: "MANAGER",
@@ -29,6 +30,7 @@ async function main() {
     update: { managerId: manager.id },
     create: {
       name: "Worker User",
+      username: "worker",
       email: "worker@office.local",
       passwordHash: password,
       role: "WORKER",
@@ -41,6 +43,7 @@ async function main() {
     update: { managerId: manager.id },
     create: {
       name: "Second Worker",
+      username: "worker2",
       email: "worker2@office.local",
       passwordHash: password,
       role: "WORKER",
@@ -109,11 +112,11 @@ async function main() {
     });
   }
 
-  console.log("Seed complete. Login with any of:");
-  console.log("  admin@office.local    / Password123!  (ADMIN)");
-  console.log("  manager@office.local  / Password123!  (MANAGER)");
-  console.log("  worker@office.local   / Password123!  (WORKER)");
-  console.log("  worker2@office.local  / Password123!  (WORKER)");
+  console.log("Seed complete. Login with email or username:");
+  console.log("  admin / admin@office.local      / Password123!  (ADMIN)");
+  console.log("  manager / manager@office.local  / Password123!  (MANAGER)");
+  console.log("  worker / worker@office.local    / Password123!  (WORKER)");
+  console.log("  worker2 / worker2@office.local  / Password123!  (WORKER)");
 }
 
 main()

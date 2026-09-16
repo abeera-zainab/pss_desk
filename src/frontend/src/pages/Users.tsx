@@ -133,7 +133,8 @@ export default function Users() {
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase());
+      user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.username ?? "").toLowerCase().includes(searchTerm.toLowerCase());
     const isRoleTab = activeTab === "ALL" || activeTab === "ADMIN" || activeTab === "MANAGER" || activeTab === "WORKER";
     const matchesTab = isRoleTab
       ? activeTab === "ALL" || user.role === activeTab
@@ -269,6 +270,12 @@ export default function Users() {
                   </th>
                   <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: "#64748B" }}>
                     <div className="flex items-center gap-2">
+                      <FontAwesomeIcon icon={faUserCog} className="text-[10px] text-indigo-400" />
+                      Username
+                    </div>
+                  </th>
+                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: "#64748B" }}>
+                    <div className="flex items-center gap-2">
                       <FontAwesomeIcon icon={faEnvelope} className="text-[10px] text-indigo-400" />
                       Email
                     </div>
@@ -321,6 +328,9 @@ export default function Users() {
                         </div>
                         <span className="font-medium" style={{ color: "#1A1D23" }}>{u.name}</span>
                       </div>
+                    </td>
+                    <td className="px-4 py-3 font-mono text-xs" style={{ color: "#64748B" }}>
+                      {u.username || "—"}
                     </td>
                     <td className="px-4 py-3 font-mono text-xs" style={{ color: "#64748B" }}>
                       {u.email}
@@ -425,6 +435,7 @@ export default function Users() {
 
 function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<Role>("WORKER");
@@ -458,6 +469,7 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
     try {
       await api.createUser({
         name,
+        username,
         email,
         password,
         role,
@@ -489,6 +501,25 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
             required 
             autoFocus 
             placeholder="Enter full name..."
+          />
+        </label>
+
+        <label className={label}>
+          <span className="flex items-center gap-2 text-sm font-semibold" style={{ color: "#1A1D23" }}>
+            <div className="flex h-6 w-6 items-center justify-center rounded-lg" style={{ background: "#EEF2FF" }}>
+              <FontAwesomeIcon icon={faUserCog} className="text-xs text-indigo-500" />
+            </div>
+            Username
+          </span>
+          <input 
+            className={`${input} mt-1.5 rounded-xl border-gray-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-colors duration-200`} 
+            value={username} 
+            onChange={(e) => setUsername(e.target.value)} 
+            required
+            minLength={3}
+            maxLength={32}
+            autoComplete="off"
+            placeholder="login name (letters, numbers, . _ -)"
           />
         </label>
 

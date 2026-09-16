@@ -91,6 +91,7 @@ enum CaseFileFolder {
 model User {
   id           String   @id @default(uuid())
   name         String
+  username     String   @unique
   email        String   @unique
   passwordHash String
   role         Role

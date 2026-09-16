@@ -7,27 +7,32 @@ import {
   AccessPayload
 } from "../utils/tokens";
 import { durationToMs } from "../utils/duration";
-import { unauthorized } from "../utils/errors";
+import { unauthorized, badRequest } from "../utils/errors";
+import { isEmailIdentifier, normalizeUsername } from "../lib/username";
 
 function accessPayload(user: {
   id: string;
   role: "ADMIN" | "MANAGER" | "WORKER";
   name: string;
+  username: string;
   email: string;
 }): AccessPayload {
-  return { id: user.id, role: user.role, name: user.name, email: user.email };
+  return { id: user.id, role: user.role, name: user.name, username: user.username, email: user.email };
 }
 
 export interface AuthResult {
   accessToken: string;
   refreshToken: string;
   refreshExpiresAt: Date;
-  user: { id: string; name: string; email: string; role: "ADMIN" | "MANAGER" | "WORKER" };
+  user: { id: string; name: string; username: string; email: string; role: "ADMIN" | "MANAGER" | "WORKER" };
 }
 
 // Verify credentials, issue a short-lived access token and a persisted refresh token.
-export async function login(email: string, password: string): Promise<AuthResult> {
-  const user = await prisma.user.findUnique({ where: { email } });
+export async function login(identifier: string, password: string): Promise<AuthResult> {
+  const raw = identifier.trim();
+  const user = isEmailIdentifier(raw)
+    ? await prisma.user.findFirst({ where: { email: { equals: raw, mode: "insensitive" } } })
+    : await prisma.user.findUnique({ where: { username: normalizeUsername(raw) } });
   if (!user || !user.isActive) throw unauthorized("Invalid credentials");
 
   const valid = await bcrypt.compare(password, user.passwordHash);
@@ -40,6 +45,7 @@ async function issueTokens(user: {
   id: string;
   role: "ADMIN" | "MANAGER" | "WORKER";
   name: string;
+  username: string;
   email: string;
 }): Promise<AuthResult> {
   const accessToken = signAccessToken(accessPayload(user));
@@ -56,7 +62,7 @@ async function issueTokens(user: {
     accessToken,
     refreshToken,
     refreshExpiresAt,
-    user: { id: user.id, name: user.name, email: user.email, role: user.role }
+    user: { id: user.id, name: user.name, username: user.username, email: user.email, role: user.role }
   };
 }
 
@@ -102,4 +108,22 @@ export async function revokeAllSessions(userId: string): Promise<number> {
     data: { revoked: true }
   });
   return result.count;
+}
+
+export async function changePassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+): Promise<void> {
+  if (currentPassword === newPassword) {
+    throw badRequest("New password must be different from the current password");
+  }
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user || !user.isActive) throw unauthorized("Invalid credentials");
+  const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!valid) throw unauthorized("Current password is incorrect");
+  await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: await bcrypt.hash(newPassword, 10) }
+  });
 }

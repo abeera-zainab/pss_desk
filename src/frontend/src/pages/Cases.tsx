@@ -4,7 +4,6 @@ import type { CaseDTO, Priority, TaskType, UserDTO } from "@shared/types";
 import { api, apiError } from "../lib/api";
 import { useAuth } from "../store/auth";
 import { Badge, Modal, ErrorText, Spinner, EmptyState } from "../components/ui";
-import { CaseFolderTabs } from "../components/caseFiles";
 import { CASE_STATUS_BADGE, PRIORITY_BADGE } from "../lib/meta";
 import { formatDate } from "../lib/format";
 import { colors, card, label, input, heading } from "../lib/theme";
@@ -359,72 +358,6 @@ export default function Cases() {
               </div>
             </Link>
           ))}
-        </div>
-
-        <div className="mt-10">
-          <div className="mb-4 flex items-center gap-2">
-            <FontAwesomeIcon icon={faFolderOpen} className="text-sm text-indigo-500" />
-            <span className="text-sm font-bold uppercase tracking-wider" style={{ color: "#1A1D23" }}>
-              Reports & Folders
-            </span>
-            <span className="rounded-full bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-600">
-              {cases.length} case{cases.length === 1 ? "" : "s"}
-            </span>
-          </div>
-          <div className="space-y-5">
-            {cases.map((c, index) => (
-              <div
-                key={`folders-${c.id}`}
-                className="overflow-hidden rounded-3xl border bg-white p-4 shadow-sm sm:p-5"
-                style={{ borderColor: "#E2E8F0", animation: `fadeUp 0.5s ease-out ${index * 80}ms both` }}
-              >
-                <div className="mb-3 flex items-center justify-between gap-2 border-b pb-3" style={{ borderColor: "#F1F5F9" }}>
-                  <div className="min-w-0 flex-1">
-                    <Link to={`/cases/${c.id}`} className="flex items-center gap-2">
-                      <span
-                        className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-                        style={{
-                          background:
-                            c.priority === "URGENT" ? "#EF4444" : c.priority === "HIGH" ? "#F59E0B" : c.priority === "MEDIUM" ? "#6366F1" : "#10B981"
-                        }}
-                      >
-                        {c.title.charAt(0).toUpperCase()}
-                      </span>
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-bold" style={{ color: "#1A1D23" }}>
-                          {c.caseNumber} Â· {c.title}
-                        </div>
-                        <div className="flex flex-wrap items-center gap-2 text-[10px]" style={{ color: "#94A3B8" }}>
-                          <span className="flex items-center gap-1">
-                            <FontAwesomeIcon icon={faUserTie} className="text-indigo-400" />
-                            {c.assignedManager?.name ?? "-"}
-                          </span>
-                          <span>Â·</span>
-                          <span className="flex items-center gap-1">
-                            <FontAwesomeIcon icon={faCalendarAlt} className="text-indigo-400" />
-                            {formatDate(c.deadline)}
-                          </span>
-                          <span>Â·</span>
-                          <span className="flex items-center gap-1">
-                            <FontAwesomeIcon icon={faTasks} className="text-indigo-400" />
-                            {c.tasks?.length ?? 0} tasks
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  </div>
-                  <Badge className={CASE_STATUS_BADGE[c.status] + " flex-shrink-0 px-2 py-0.5 text-[10px]"}>
-                    {c.status.replaceAll("_", " ")}
-                  </Badge>
-                </div>
-                <CaseFolderTabs
-                  kase={c}
-                  canUpload={user?.role === "ADMIN" || (user?.role === "MANAGER" && c.assignedManagerId === user.id)}
-                  onChanged={load}
-                />
-              </div>
-            ))}
-          </div>
         </div>
         </>
       )}

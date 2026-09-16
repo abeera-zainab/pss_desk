@@ -5,10 +5,12 @@ import { AuthUser } from "../middleware/auth";
 import { badRequest, conflict, notFound } from "../utils/errors";
 import { parsePagination, paginated } from "../utils/pagination";
 import { revokeAllSessions } from "./auth.service";
+import { normalizeUsername } from "../lib/username";
 
 const publicSelect = {
   id: true,
   name: true,
+  username: true,
   email: true,
   role: true,
   isActive: true,
@@ -67,14 +69,20 @@ export async function listUsers(query: any) {
 
 export async function createUser(input: {
   name: string;
+  username: string;
   email: string;
   password: string;
   role: "ADMIN" | "MANAGER" | "WORKER";
   managerId?: string;
   domains?: TaskType[];
 }) {
-  const existing = await prisma.user.findUnique({ where: { email: input.email } });
-  if (existing) throw conflict("A user with that email already exists");
+  const username = normalizeUsername(input.username);
+  const [existingEmail, existingUsername] = await Promise.all([
+    prisma.user.findUnique({ where: { email: input.email } }),
+    prisma.user.findUnique({ where: { username } })
+  ]);
+  if (existingEmail) throw conflict("A user with that email already exists");
+  if (existingUsername) throw conflict("A user with that username already exists");
 
   const managerId = input.role === "ADMIN" ? null : input.managerId ?? null;
   await assertReportingChain(input.role, managerId);
@@ -83,6 +91,7 @@ export async function createUser(input: {
   return prisma.user.create({
     data: {
       name: input.name,
+      username,
       email: input.email,
       passwordHash,
       role: input.role,
@@ -97,6 +106,7 @@ export async function updateUser(
   id: string,
   input: {
     name?: string;
+    username?: string;
     role?: "ADMIN" | "MANAGER" | "WORKER";
     isActive?: boolean;
     password?: string;
@@ -109,6 +119,12 @@ export async function updateUser(
 
   const data: Prisma.UserUncheckedUpdateInput = {};
   if (input.name !== undefined) data.name = input.name;
+  if (input.username !== undefined) {
+    const username = normalizeUsername(input.username);
+    const taken = await prisma.user.findUnique({ where: { username } });
+    if (taken && taken.id !== id) throw conflict("A user with that username already exists");
+    data.username = username;
+  }
   if (input.role !== undefined) data.role = input.role;
   if (input.isActive !== undefined) data.isActive = input.isActive;
   if (input.password) data.passwordHash = await bcrypt.hash(input.password, 10);
@@ -159,7 +175,7 @@ export async function deactivateUser(id: string) {
 export async function listManagers() {
   return prisma.user.findMany({
     where: { role: "MANAGER", isActive: true },
-    select: { id: true, name: true, email: true },
+    select: { id: true, name: true, email: true, username: true },
     orderBy: { name: "asc" }
   });
 }

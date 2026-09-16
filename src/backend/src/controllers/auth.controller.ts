@@ -21,8 +21,8 @@ function refreshCookieOptions(expiresAt?: Date) {
 }
 
 export async function login(req: Request, res: Response) {
-  const { email, password } = req.body;
-  const result = await authService.login(email, password);
+  const identifier = (req.body.identifier ?? req.body.email) as string;
+  const result = await authService.login(identifier, req.body.password);
   res.cookie(REFRESH_COOKIE, result.refreshToken, refreshCookieOptions(result.refreshExpiresAt));
   res.json({ accessToken: result.accessToken, user: result.user });
 }
@@ -42,4 +42,9 @@ export async function logout(req: Request, res: Response) {
 
 export async function me(req: Request, res: Response) {
   res.json(req.user);
+}
+
+export async function changePassword(req: Request, res: Response) {
+  await authService.changePassword(req.user!.id, req.body.currentPassword, req.body.newPassword);
+  res.json({ ok: true });
 }

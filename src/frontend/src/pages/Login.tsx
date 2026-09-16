@@ -5,8 +5,8 @@ import { apiError } from "../lib/api";
 import { ErrorText } from "../components/ui";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
-  faEnvelope, 
   faLock, 
+  faUser,
   faEye, 
   faEyeSlash,
   faRocket,
@@ -38,7 +38,7 @@ function LoginKeyframes() {
 export default function Login() {
   const { login, user } = useAuth();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -51,7 +51,7 @@ export default function Login() {
     setError("");
     setSubmitting(true);
     try {
-      await login(email, password);
+      await login(identifier, password);
       navigate("/");
     } catch (err) {
       setError(apiError(err));
@@ -108,7 +108,7 @@ export default function Login() {
         </h1>
         <p className="mt-1.5 text-[13px] text-center flex items-center justify-center gap-2" style={{ color: "#64748B" }}>
           <FontAwesomeIcon icon={faShieldAlt} className="text-[10px] text-indigo-400" />
-          Sign in to continue
+          Sign in with email or username
         </p>
 
         {/* Form */}
@@ -120,22 +120,22 @@ export default function Login() {
             boxShadow: "0 4px 24px rgba(0,0,0,0.04)",
           }}
         >
-          {/* Email Field */}
+          {/* Identifier Field */}
           <div className="mb-4">
             <label
-              htmlFor="email"
+              htmlFor="identifier"
               className="mb-2 flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider"
               style={{ color: "#64748B" }}
             >
-              <FontAwesomeIcon icon={faEnvelope} className="text-[10px] text-indigo-400" />
-              Office Email
+              <FontAwesomeIcon icon={faUser} className="text-[10px] text-indigo-400" />
+              Email or username
             </label>
             <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@company.com"
+              id="identifier"
+              type="text"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              placeholder="you@company.com or username"
               required
               autoFocus
               autoComplete="username"

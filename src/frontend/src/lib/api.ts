@@ -101,11 +101,13 @@ export function apiError(e: unknown): string {
 
 export const api = {
   // auth
-  login: (email: string, password: string) =>
-    http.post("/auth/login", { email, password }).then((r) => r.data as { accessToken: string; user: UserDTO }),
+  login: (identifier: string, password: string) =>
+    http.post("/auth/login", { identifier, password }).then((r) => r.data as { accessToken: string; user: UserDTO }),
   refresh: () => http.post("/auth/refresh").then((r) => r.data as { accessToken: string; user: UserDTO }),
   logout: () => http.post("/auth/logout").then((r) => r.data),
   me: () => http.get("/auth/me").then((r) => r.data),
+  changePassword: (currentPassword: string, newPassword: string) =>
+    http.post("/auth/change-password", { currentPassword, newPassword }).then((r) => r.data as { ok: boolean }),
 
   // stats
   dashboard: () => http.get("/stats/dashboard").then((r) => r.data),
@@ -117,6 +119,7 @@ export const api = {
   getWorkers: () => http.get("/users/workers").then((r) => r.data as UserDTO[]),
   createUser: (data: {
     name: string;
+    username: string;
     email: string;
     password: string;
     role: Role;
@@ -127,6 +130,7 @@ export const api = {
     id: string,
     data: Partial<{
       name: string;
+      username: string;
       role: Role;
       isActive: boolean;
       password: string;

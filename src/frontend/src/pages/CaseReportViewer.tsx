@@ -5,7 +5,7 @@ import { api, apiError } from "../lib/api";
 import { ErrorText, Spinner } from "../components/ui";
 import { CaseFilePreview } from "../components/caseFiles/CaseFilePreview";
 
-export function CaseReportViewer() {
+export default function CaseReportViewer() {
   const { id, fileId } = useParams();
   const navigate = useNavigate();
   const [kase, setKase] = useState<CaseDTO | null>(null);

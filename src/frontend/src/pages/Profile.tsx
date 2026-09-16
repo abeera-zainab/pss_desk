@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { useAuth } from "../store/auth";
-import { Badge } from "../components/ui";
+import { Badge, ErrorText } from "../components/ui";
 import { roleLabel } from "../lib/roles";
+import { api, apiError } from "../lib/api";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { 
   faUser, 
@@ -23,7 +25,9 @@ import {
   faBriefcase,
   faIdCard,
   faCalendarCheck,
-  faAward
+  faAward,
+  faLock,
+  faAt
 } from '@fortawesome/free-solid-svg-icons';
 
 function ProfileKeyframes() {
@@ -110,7 +114,7 @@ export default function Profile() {
     <div className="min-h-screen p-6 lg:p-8 flex items-center justify-center" style={{ background: "#F8FAFC" }}>
       <ProfileKeyframes />
 
-      <div className="w-full max-w-3xl" style={{ animation: "fadeUp 0.6s ease-out both" }}>
+      <div className="w-full max-w-3xl space-y-6" style={{ animation: "fadeUp 0.6s ease-out both" }}>
         {/* Header Card */}
         <div className="relative overflow-hidden rounded-3xl bg-white border shadow-lg hover:shadow-xl transition-shadow duration-300" style={{ borderColor: "#E2E8F0" }}>
           {/* Animated gradient background */}
@@ -179,7 +183,7 @@ export default function Profile() {
               </div>
 
               {/* Quick Stats - Larger Cards */}
-              <div className="mt-8 grid grid-cols-3 gap-4 w-full max-w-2xl">
+              <div className="mt-8 grid grid-cols-2 gap-4 w-full max-w-2xl sm:grid-cols-4">
                 <div className="rounded-2xl border px-5 py-4 text-center transition-all duration-300 hover:shadow-md hover:-translate-y-0.5" style={{ borderColor: "#E2E8F0", background: statsBg }}>
                   <div className="text-xs font-medium uppercase tracking-wider flex items-center justify-center gap-2" style={{ color: "#64748B" }}>
                     <FontAwesomeIcon icon={faBriefcase} className="text-indigo-400 text-[12px]" />
@@ -187,6 +191,15 @@ export default function Profile() {
                   </div>
                   <div className="mt-1.5 text-base font-bold" style={{ color: "#1A1D23" }}>
                     {roleLabel(user.role)}
+                  </div>
+                </div>
+                <div className="rounded-2xl border px-5 py-4 text-center transition-all duration-300 hover:shadow-md hover:-translate-y-0.5" style={{ borderColor: "#E2E8F0", background: statsBg }}>
+                  <div className="text-xs font-medium uppercase tracking-wider flex items-center justify-center gap-2" style={{ color: "#64748B" }}>
+                    <FontAwesomeIcon icon={faAt} className="text-indigo-400 text-[12px]" />
+                    Username
+                  </div>
+                  <div className="mt-1.5 text-sm font-mono font-bold truncate" style={{ color: "#1A1D23" }}>
+                    {user.username || "—"}
                   </div>
                 </div>
                 <div className="rounded-2xl border px-5 py-4 text-center transition-all duration-300 hover:shadow-md hover:-translate-y-0.5" style={{ borderColor: "#E2E8F0", background: statsBg }}>
@@ -228,6 +241,16 @@ export default function Profile() {
                   Full Name
                 </dt>
                 <dd className="font-semibold text-base" style={{ color: "#1A1D23" }}>{user.name}</dd>
+              </div>
+
+              <div className="flex items-center justify-between py-4 text-sm lg:text-base">
+                <dt className="flex items-center gap-3" style={{ color: "#64748B" }}>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: "#EEF2FF" }}>
+                    <FontAwesomeIcon icon={faAt} className="text-sm text-indigo-500" />
+                  </div>
+                  Username
+                </dt>
+                <dd className="font-mono text-sm lg:text-base font-semibold" style={{ color: "#1A1D23" }}>{user.username || "—"}</dd>
               </div>
               
               <div className="flex items-center justify-between py-4 text-sm lg:text-base">
@@ -312,7 +335,101 @@ export default function Profile() {
             </div>
           </div>
         </div>
+
+        <ChangePasswordCard />
       </div>
+    </div>
+  );
+}
+
+function ChangePasswordCard() {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    if (newPassword !== confirmPassword) {
+      setError("New password and confirmation do not match");
+      return;
+    }
+    setSaving(true);
+    try {
+      await api.changePassword(currentPassword, newPassword);
+      setSuccess("Password updated");
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (err) {
+      setError(apiError(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const field =
+    "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100";
+
+  return (
+    <div className="rounded-3xl border bg-white p-6 shadow-sm lg:p-8" style={{ borderColor: "#E2E8F0" }}>
+      <h3 className="text-sm font-semibold uppercase tracking-wider" style={{ color: "#64748B" }}>
+        <FontAwesomeIcon icon={faLock} className="mr-2 text-indigo-400" />
+        Change password
+      </h3>
+      <p className="mt-1 text-xs" style={{ color: "#94A3B8" }}>
+        Any signed-in user can update their own password.
+      </p>
+      <form onSubmit={submit} className="mt-5 flex flex-col gap-3">
+        {error && <ErrorText message={error} />}
+        {success && <p className="text-sm font-medium text-emerald-600">{success}</p>}
+        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#64748B" }}>
+          Current password
+          <input
+            className={`${field} mt-1.5`}
+            type="password"
+            autoComplete="current-password"
+            value={currentPassword}
+            onChange={(e) => setCurrentPassword(e.target.value)}
+            required
+          />
+        </label>
+        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#64748B" }}>
+          New password
+          <input
+            className={`${field} mt-1.5`}
+            type="password"
+            autoComplete="new-password"
+            minLength={8}
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            required
+          />
+        </label>
+        <label className="text-xs font-semibold uppercase tracking-wider" style={{ color: "#64748B" }}>
+          Confirm new password
+          <input
+            className={`${field} mt-1.5`}
+            type="password"
+            autoComplete="new-password"
+            minLength={8}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+          />
+        </label>
+        <button
+          type="submit"
+          disabled={saving}
+          className="mt-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
+        >
+          {saving ? "Saving..." : "Update password"}
+        </button>
+      </form>
     </div>
   );
 }

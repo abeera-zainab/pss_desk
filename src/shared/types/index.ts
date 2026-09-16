@@ -99,6 +99,7 @@ export type CaseFileFolder = (typeof CaseFileFolder)[keyof typeof CaseFileFolder
 export interface UserDTO {
   id: string;
   name: string;
+  username: string;
   email: string;
   role: Role;
   isActive: boolean;

@@ -8,7 +8,6 @@ import { CASE_STATUS_BADGE, PRIORITY_BADGE, TASK_STATUS_BADGE, TASK_STATUS_LABEL
 import { formatDate } from "../lib/format";
 import { card, label, input, btn, btnDark, heading, eyebrow, link, colors } from "../lib/theme";
 import CaseBoard from "./CaseBoard";
-import { ReportLibrary } from "../components/caseFiles";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
@@ -21,7 +20,6 @@ import {
   faTag,
   faUsers,
   faCheckCircle,
-  faPaperclip,
   faLink as faLinkIcon,
   faFire,
   faArrowRight,
@@ -186,23 +184,7 @@ export default function CaseDetail() {
             </div>
             Tasks: {kase.tasks?.length ?? 0}
           </span>
-          <span className="flex items-center gap-1.5 text-xs" style={{ color: "#64748B" }}>
-            <div className="flex h-6 w-6 items-center justify-center rounded-lg" style={{ background: "#EEF2FF" }}>
-              <FontAwesomeIcon icon={faPaperclip} className="text-[10px] text-indigo-500" />
-            </div>
-            Files: {kase.files?.length ?? 0}
-          </span>
         </div>
-      </div>
-
-      <div className="mt-6" style={{ animation: "fadeUp 0.5s ease-out 0.08s both" }}>
-        <ReportLibrary
-          kase={kase}
-          canUpload={
-            user?.role === "ADMIN" || (user?.role === "MANAGER" && kase.assignedManagerId === user.id)
-          }
-          onChanged={load}
-        />
       </div>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2">

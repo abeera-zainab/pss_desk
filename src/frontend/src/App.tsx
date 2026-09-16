@@ -8,6 +8,7 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import KanbanBoard from "./pages/KanbanBoard";
 import Cases from "./pages/Cases";
+import IntelFolderPage from "./pages/IntelFolderPage";
 import CaseDetail from "./pages/CaseDetail";
 import CaseReportViewer from "./pages/CaseReportViewer";
 import TaskDetail from "./pages/TaskDetail";
@@ -62,6 +63,7 @@ export default function App() {
         <Route index element={<Dashboard />} />
         <Route path="board" element={<KanbanBoard />} />
         <Route path="cases" element={<Cases />} />
+        <Route path="intelligence/:slug" element={<IntelFolderPage />} />
         <Route path="cases/:id/files/:fileId" element={<CaseReportViewer />} />
         <Route path="cases/:id" element={<CaseDetail />} />
         <Route path="tasks/:id" element={<TaskDetail />} />

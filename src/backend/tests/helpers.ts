@@ -19,7 +19,8 @@ export async function resetDb() {
 
 export async function makeUser(role: "ADMIN" | "MANAGER" | "WORKER", email: string, name = email) {
   const passwordHash = await bcrypt.hash("Password123!", 10);
-  return prisma.user.create({ data: { name, email, passwordHash, role } });
+  const username = email.split("@")[0].toLowerCase();
+  return prisma.user.create({ data: { name, email, username, passwordHash, role } });
 }
 
 // Logs a user in and returns their access token.

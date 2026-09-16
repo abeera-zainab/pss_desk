@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import type { FileDTO } from "@shared/types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -9,33 +9,54 @@ import { getCachedFileBlob } from "./blobCache";
 import { getFileIcon, isImageFile, isPdfFile } from "./fileKinds";
 import { renderPdfDocument } from "./pdf";
 
-function PdfViewer({ blob }: { blob: Blob }) {
+function PdfViewer({
+  blob,
+  stageRef
+}: {
+  blob: Blob;
+  stageRef: RefObject<HTMLDivElement | null>;
+}) {
   const hostRef = useRef<HTMLDivElement | null>(null);
-  const widthRef = useRef<HTMLDivElement | null>(null);
   const [failed, setFailed] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const host = hostRef.current;
-    const widthEl = widthRef.current;
-    if (!host || !widthEl) return;
+    const stage = stageRef.current;
+    if (!host || !stage) return;
     let cancelled = false;
     let renderSignal = { cancelled: false };
     let timer: number | undefined;
-    let lastWidth = 0;
+    let lastKey = "";
+
+    const pinStart = () => {
+      stage.scrollTop = 0;
+      stage.scrollLeft = 0;
+    };
 
     const run = () => {
-      const width = Math.max(320, Math.round(widthEl.clientWidth || window.innerWidth));
-      if (width === lastWidth) return;
-      lastWidth = width;
+      const width = Math.max(320, Math.round(stage.clientWidth || window.innerWidth));
+      const height = Math.max(240, Math.round(stage.clientHeight || window.innerHeight - 56));
+      const key = `${width}x${height}`;
+      if (key === lastKey) return;
+      lastKey = key;
       renderSignal.cancelled = true;
       renderSignal = { cancelled: false };
       const signal = renderSignal;
       setFailed(false);
       setLoading(true);
-      renderPdfDocument(blob, host, { signal, fitWidth: width })
+      pinStart();
+      renderPdfDocument(blob, host, {
+        signal,
+        fitWidth: width,
+        fitHeight: height,
+        onFirstPage: pinStart
+      })
         .then(() => {
-          if (!cancelled && !signal.cancelled) setLoading(false);
+          if (!cancelled && !signal.cancelled) {
+            pinStart();
+            setLoading(false);
+          }
         })
         .catch(() => {
           if (!cancelled && !signal.cancelled) {
@@ -49,7 +70,7 @@ function PdfViewer({ blob }: { blob: Blob }) {
       window.clearTimeout(timer);
       timer = window.setTimeout(run, 120);
     });
-    ro.observe(widthEl);
+    ro.observe(stage);
     run();
 
     return () => {
@@ -59,7 +80,7 @@ function PdfViewer({ blob }: { blob: Blob }) {
       ro.disconnect();
       host.replaceChildren();
     };
-  }, [blob]);
+  }, [blob, stageRef]);
 
   if (failed) {
     return (
@@ -72,7 +93,6 @@ function PdfViewer({ blob }: { blob: Blob }) {
 
   return (
     <div className="relative min-h-full w-full">
-      <div ref={widthRef} className="h-0 w-full" />
       {loading && (
         <div className="absolute inset-0 z-10 flex items-center justify-center text-indigo-400">
           <FontAwesomeIcon icon={faSpinner} className="animate-spin text-2xl" />
@@ -84,6 +104,8 @@ function PdfViewer({ blob }: { blob: Blob }) {
 }
 
 export function CaseFilePreview({ file, onClose }: { file: FileDTO; onClose: () => void }) {
+  const stageRef = useRef<HTMLDivElement | null>(null);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -115,6 +137,8 @@ export function CaseFilePreview({ file, onClose }: { file: FileDTO; onClose: () 
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    overlayRef.current?.focus();
+    stageRef.current?.scrollTo(0, 0);
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
     }
@@ -123,10 +147,10 @@ export function CaseFilePreview({ file, onClose }: { file: FileDTO; onClose: () 
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
-  }, [onClose]);
+  }, [onClose, file.id]);
 
   return createPortal(
-    <div className="fixed inset-0 z-[80] flex flex-col bg-white">
+    <div ref={overlayRef} tabIndex={-1} className="fixed inset-0 z-[80] flex flex-col bg-white outline-none">
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2.5">
         <div className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold text-slate-900" title={file.filename}>
@@ -156,11 +180,11 @@ export function CaseFilePreview({ file, onClose }: { file: FileDTO; onClose: () 
           </button>
         </div>
       </div>
-      <div className="min-h-0 flex-1 overflow-auto bg-slate-100">
+      <div ref={stageRef} className="min-h-0 flex-1 overflow-auto bg-slate-100 [overflow-anchor:none]">
         {isImage && src ? (
-          <img src={src} alt={file.filename} className="mx-auto h-auto w-full max-w-none object-contain" />
+          <img src={src} alt={file.filename} className="mx-auto h-auto max-h-full w-auto max-w-full object-contain object-top" />
         ) : isPdf && blob ? (
-          <PdfViewer blob={blob} />
+          <PdfViewer blob={blob} stageRef={stageRef} />
         ) : failed || (!isImage && !isPdf) ? (
           <div className="flex min-h-[50vh] flex-col items-center justify-center gap-2 p-6 text-center text-slate-400">
             <FontAwesomeIcon icon={getFileIcon(file.filename)} className="text-4xl" />

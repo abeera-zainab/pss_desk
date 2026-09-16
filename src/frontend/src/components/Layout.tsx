@@ -35,7 +35,12 @@ const navByRole: Record<string, NavEntry[]> = {
   ADMIN: [
     { to: "/", label: "Dashboard", icon: faChartBar },
     { to: "/board", label: "Kanban Board", icon: faColumns },
-    { to: "/cases", label: "Cases", icon: faFolderOpen },
+    { label: "Cases", icon: faFolderOpen, items: [
+      { to: "/cases", label: "All cases" },
+      { to: "/intelligence/osint", label: "Initial OSINT" },
+      { to: "/intelligence/geoint", label: "GEOINT" },
+      { to: "/intelligence/threat-alert", label: "Threat Alert" }
+    ] },
     { to: "/users", label: "User Management", icon: faUsers },
     { label: "HR", icon: faCalendarAlt, items: [
       { to: "/attendance", label: "Time tracking" },
@@ -48,7 +53,12 @@ const navByRole: Record<string, NavEntry[]> = {
   MANAGER: [
     { to: "/", label: "Dashboard", icon: faChartBar },
     { to: "/board", label: "Kanban Board", icon: faColumns },
-    { to: "/cases", label: "Cases", icon: faFolderOpen },
+    { label: "Cases", icon: faFolderOpen, items: [
+      { to: "/cases", label: "All cases" },
+      { to: "/intelligence/osint", label: "Initial OSINT" },
+      { to: "/intelligence/geoint", label: "GEOINT" },
+      { to: "/intelligence/threat-alert", label: "Threat Alert" }
+    ] },
     { label: "HR", icon: faCalendarAlt, items: [
       { to: "/attendance", label: "Time tracking" },
       { to: "/leave", label: "Leave" },
@@ -60,7 +70,12 @@ const navByRole: Record<string, NavEntry[]> = {
   WORKER: [
     { to: "/", label: "Dashboard", icon: faChartBar },
     { to: "/board", label: "Kanban Board", icon: faColumns },
-    { to: "/cases", label: "Cases", icon: faFolderOpen },
+    { label: "Cases", icon: faFolderOpen, items: [
+      { to: "/cases", label: "All cases" },
+      { to: "/intelligence/osint", label: "Initial OSINT" },
+      { to: "/intelligence/geoint", label: "GEOINT" },
+      { to: "/intelligence/threat-alert", label: "Threat Alert" }
+    ] },
     { label: "HR", icon: faCalendarAlt, items: [
       { to: "/attendance", label: "Time tracking" },
       { to: "/leave", label: "Leave" },
@@ -138,7 +153,11 @@ function IconBadge({ icon, active }: { icon: any; active: boolean }) {
 
 function NavGroupItem({ group, index }: { group: NavGroup; index: number }) {
   const location = useLocation();
-  const containsActive = group.items.some((it) => location.pathname === it.to);
+  const containsActive = group.items.some((it) =>
+    it.to === "/"
+      ? location.pathname === "/"
+      : location.pathname === it.to || location.pathname.startsWith(`${it.to}/`)
+  );
   const [open, setOpen] = useState(containsActive);
 
   return (

@@ -4,6 +4,7 @@ import { faExclamationTriangle, faGlobe, faMapMarkerAlt } from "@fortawesome/fre
 
 export type CaseFolderMeta = {
   value: CaseFileFolder;
+  slug: string;
   label: string;
   hint: string;
   icon: IconDefinition;
@@ -13,6 +14,7 @@ export type CaseFolderMeta = {
 export const CASE_FILE_FOLDERS: CaseFolderMeta[] = [
   {
     value: "INITIAL_OSINT",
+    slug: "osint",
     label: "Initial OSINT",
     hint: "Open Source Intelligence & Prior Case Dossiers",
     icon: faGlobe,
@@ -20,6 +22,7 @@ export const CASE_FILE_FOLDERS: CaseFolderMeta[] = [
   },
   {
     value: "LOCATION_ANALYSIS",
+    slug: "geoint",
     label: "GEOINT",
     hint: "Geographic Intelligence, Maps & Coordinates",
     icon: faMapMarkerAlt,
@@ -27,6 +30,7 @@ export const CASE_FILE_FOLDERS: CaseFolderMeta[] = [
   },
   {
     value: "THREAT_ALERT",
+    slug: "threat-alert",
     label: "Threat Alert",
     hint: "Threat Assessments, Bulletins & Priority Packages",
     icon: faExclamationTriangle,
@@ -36,4 +40,8 @@ export const CASE_FILE_FOLDERS: CaseFolderMeta[] = [
 
 export function folderMeta(value: CaseFileFolder): CaseFolderMeta {
   return CASE_FILE_FOLDERS.find((f) => f.value === value) ?? CASE_FILE_FOLDERS[0];
+}
+
+export function folderBySlug(slug: string | undefined): CaseFolderMeta | undefined {
+  return CASE_FILE_FOLDERS.find((f) => f.slug === slug);
 }

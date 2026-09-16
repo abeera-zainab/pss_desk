@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { usernameField } from "./auth.validator";
 
 const role = z.enum(["ADMIN", "MANAGER", "WORKER"]);
 
@@ -13,6 +14,7 @@ export const listUsersSchema = z.object({
 export const createUserSchema = z.object({
   body: z.object({
     name: z.string().min(1),
+    username: usernameField,
     email: z.string().email(),
     password: z.string().min(8, "Password must be at least 8 characters"),
     role,
@@ -25,6 +27,7 @@ export const updateUserSchema = z.object({
   params: z.object({ id: z.string().uuid() }),
   body: z.object({
     name: z.string().min(1).optional(),
+    username: usernameField.optional(),
     role: role.optional(),
     isActive: z.boolean().optional(),
     password: z.string().min(8).optional(), 

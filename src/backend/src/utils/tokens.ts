@@ -5,6 +5,7 @@ export interface AccessPayload {
   id: string;
   role: "ADMIN" | "MANAGER" | "WORKER";
   name: string;
+  username?: string;
   email: string;
 }
 

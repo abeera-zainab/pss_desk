@@ -30,9 +30,34 @@ describe("auth", () => {
     expect(res.status).toBe(401);
   });
 
-  it("rejects a malformed login body (zod validation)", async () => {
-    const res = await request(app).post("/api/auth/login").send({ email: "notanemail" });
-    expect(res.status).toBe(400);
+  it("logs in with username as well as email", async () => {
+    const res = await request(app)
+      .post("/api/auth/login")
+      .send({ identifier: "admin", password: "Password123!" });
+    expect(res.status).toBe(200);
+    expect(res.body.user.username).toBe("admin");
+  });
+
+  it("lets the signed-in user change their password", async () => {
+    await makeUser("WORKER", "changer@test.local", "Changer");
+    const login = await request(app)
+      .post("/api/auth/login")
+      .send({ identifier: "changer", password: "Password123!" });
+    const changed = await request(app)
+      .post("/api/auth/change-password")
+      .set("Authorization", `Bearer ${login.body.accessToken}`)
+      .send({ currentPassword: "Password123!", newPassword: "NewPass123!" });
+    expect(changed.status).toBe(200);
+
+    const oldLogin = await request(app)
+      .post("/api/auth/login")
+      .send({ email: "changer@test.local", password: "Password123!" });
+    expect(oldLogin.status).toBe(401);
+
+    const newLogin = await request(app)
+      .post("/api/auth/login")
+      .send({ identifier: "changer", password: "NewPass123!" });
+    expect(newLogin.status).toBe(200);
   });
 
   it("returns the current user from /auth/me", async () => {
