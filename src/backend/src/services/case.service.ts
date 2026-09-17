@@ -49,7 +49,7 @@ export async function createCase(
   }
 ) {
   const manager = await prisma.user.findUnique({ where: { id: input.assignedManagerId } });
-  if (!manager || manager.role !== "MANAGER" || !manager.isActive) {
+  if (!manager || manager.role !== "MANAGER" || !manager.isActive || manager.deletedAt) {
     throw badRequest("assignedManagerId must reference an active MANAGER");
   }
 
@@ -171,7 +171,7 @@ export async function updateCase(
   await getCaseOrThrow(id);
   if (input.assignedManagerId) {
     const manager = await prisma.user.findUnique({ where: { id: input.assignedManagerId } });
-    if (!manager || manager.role !== "MANAGER") {
+    if (!manager || manager.role !== "MANAGER" || !manager.isActive || manager.deletedAt) {
       throw badRequest("assignedManagerId must reference a MANAGER");
     }
   }

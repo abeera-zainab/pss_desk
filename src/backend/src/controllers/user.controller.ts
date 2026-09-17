@@ -31,3 +31,9 @@ export async function remove(req: Request, res: Response) {
   await logActivity(req.user!.id, "USER_DEACTIVATED", "USER", user.id, user.email);
   res.json(user);
 }
+
+export async function permanentlyRemove(req: Request, res: Response) {
+  const result = await userService.permanentlyDeleteUser(req.user!, req.params.id);
+  await logActivity(req.user!.id, "USER_PERMANENTLY_DELETED", "USER", result.id, result.email);
+  res.json({ ok: true, id: result.id });
+}

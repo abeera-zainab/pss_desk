@@ -24,7 +24,7 @@ describe("Login", () => {
     loginMock.mockResolvedValueOnce(undefined);
     renderLogin();
     expect(screen.getByText("PSS WORKSPACE")).toBeInTheDocument();
-    await userEvent.type(screen.getByPlaceholderText("you@company.com or username"), "admin@office.local");
+    await userEvent.type(screen.getByPlaceholderText("PSS-0001, username, or email"), "admin@office.local");
     await userEvent.type(screen.getByPlaceholderText("••••••••"), "Password123!");
     await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
     expect(loginMock).toHaveBeenCalledWith("admin@office.local", "Password123!");
@@ -33,7 +33,7 @@ describe("Login", () => {
   it("shows an error message when login fails", async () => {
     loginMock.mockRejectedValueOnce(new Error("Invalid credentials"));
     renderLogin();
-    await userEvent.type(screen.getByPlaceholderText("you@company.com or username"), "admin");
+    await userEvent.type(screen.getByPlaceholderText("PSS-0001, username, or email"), "admin");
     await userEvent.type(screen.getByPlaceholderText("••••••••"), "bad");
     await userEvent.click(screen.getByRole("button", { name: /sign in/i }));
     expect(await screen.findByText("Invalid credentials")).toBeInTheDocument();

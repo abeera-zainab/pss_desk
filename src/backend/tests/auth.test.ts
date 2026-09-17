@@ -38,6 +38,22 @@ describe("auth", () => {
     expect(res.body.user.username).toBe("admin");
   });
 
+  it("logs in with the user ID number", async () => {
+    const admin = await prisma.user.findUnique({ where: { email: "admin@test.local" } });
+    expect(admin?.loginNo).toBeTruthy();
+    const byFull = await request(app)
+      .post("/api/auth/login")
+      .send({ identifier: admin!.loginNo, password: "Password123!" });
+    expect(byFull.status).toBe(200);
+    expect(byFull.body.user.loginNo).toBe(admin!.loginNo);
+
+    const digits = admin!.loginNo.replace(/^PSS-/i, "");
+    const byDigits = await request(app)
+      .post("/api/auth/login")
+      .send({ identifier: digits, password: "Password123!" });
+    expect(byDigits.status).toBe(200);
+  });
+
   it("lets the signed-in user change their password", async () => {
     await makeUser("WORKER", "changer@test.local", "Changer");
     const login = await request(app)

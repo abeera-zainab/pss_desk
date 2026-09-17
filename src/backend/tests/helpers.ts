@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import request from "supertest";
 import { createApp } from "../src/app";
 import { prisma } from "../src/lib/prisma";
+import { generateLoginNo } from "../src/lib/generateReferenceId";
 
 export const app = createApp();
 
@@ -20,7 +21,8 @@ export async function resetDb() {
 export async function makeUser(role: "ADMIN" | "MANAGER" | "WORKER", email: string, name = email) {
   const passwordHash = await bcrypt.hash("Password123!", 10);
   const username = email.split("@")[0].toLowerCase();
-  return prisma.user.create({ data: { name, email, username, passwordHash, role } });
+  const loginNo = await generateLoginNo();
+  return prisma.user.create({ data: { name, email, username, loginNo, passwordHash, role } });
 }
 
 // Logs a user in and returns their access token.

@@ -108,7 +108,7 @@ export default function Login() {
         </h1>
         <p className="mt-1.5 text-[13px] text-center flex items-center justify-center gap-2" style={{ color: "#64748B" }}>
           <FontAwesomeIcon icon={faShieldAlt} className="text-[10px] text-indigo-400" />
-          Sign in with email or username
+          Sign in with ID number, username, or email
         </p>
 
         {/* Form */}
@@ -128,14 +128,14 @@ export default function Login() {
               style={{ color: "#64748B" }}
             >
               <FontAwesomeIcon icon={faUser} className="text-[10px] text-indigo-400" />
-              Email or username
+              ID number, username, or email
             </label>
             <input
               id="identifier"
               type="text"
               value={identifier}
               onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="you@company.com or username"
+              placeholder="PSS-0001, username, or email"
               required
               autoFocus
               autoComplete="username"

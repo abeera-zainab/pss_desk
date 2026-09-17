@@ -4,7 +4,7 @@ import { api, setAccessToken, setOnUnauthorized, setOnTokenRefreshed } from "../
 import { connectSocket, disconnectSocket, updateSocketToken } from "../lib/socket";
 
 interface AuthState {
-  user: Pick<UserDTO, "id" | "name" | "username" | "email" | "role"> | null;
+  user: Pick<UserDTO, "id" | "name" | "username" | "loginNo" | "email" | "role"> | null;
   ready: boolean; // has the initial refresh attempt finished?
   init: () => Promise<void>;
   login: (identifier: string, password: string) => Promise<void>;

@@ -1,7 +1,7 @@
 import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { prisma } from "./lib/prisma";
-import { generateCaseNumber, generateTaskReferenceId } from "./lib/generateReferenceId";
+import { generateCaseNumber, generateTaskReferenceId, generateLoginNo } from "./lib/generateReferenceId";
 
 async function main() {
   const password = await bcrypt.hash("Password123!", 10);
@@ -9,7 +9,7 @@ async function main() {
   const admin = await prisma.user.upsert({
     where: { email: "admin@office.local" },
     update: {},
-    create: { name: "Admin User", username: "admin", email: "admin@office.local", passwordHash: password, role: "ADMIN" }
+    create: { name: "Admin User", username: "admin", email: "admin@office.local", passwordHash: password, role: "ADMIN", loginNo: await generateLoginNo() }
   });
 
   const manager = await prisma.user.upsert({
@@ -21,7 +21,8 @@ async function main() {
       email: "manager@office.local",
       passwordHash: password,
       role: "MANAGER",
-      managerId: admin.id
+      managerId: admin.id,
+      loginNo: await generateLoginNo()
     }
   });
 
@@ -34,7 +35,8 @@ async function main() {
       email: "worker@office.local",
       passwordHash: password,
       role: "WORKER",
-      managerId: manager.id
+      managerId: manager.id,
+      loginNo: await generateLoginNo()
     }
   });
 
@@ -47,7 +49,8 @@ async function main() {
       email: "worker2@office.local",
       passwordHash: password,
       role: "WORKER",
-      managerId: manager.id
+      managerId: manager.id,
+      loginNo: await generateLoginNo()
     }
   });
 
@@ -112,11 +115,10 @@ async function main() {
     });
   }
 
-  console.log("Seed complete. Login with email or username:");
-  console.log("  admin / admin@office.local      / Password123!  (ADMIN)");
-  console.log("  manager / manager@office.local  / Password123!  (MANAGER)");
-  console.log("  worker / worker@office.local    / Password123!  (WORKER)");
-  console.log("  worker2 / worker2@office.local  / Password123!  (WORKER)");
+  console.log("Seed complete. Login with ID number, username, or email:");
+  console.log(`  ${admin.loginNo} / admin / admin@office.local      / Password123!  (ADMIN)`);
+  console.log(`  ${manager.loginNo} / manager / manager@office.local  / Password123!  (MANAGER)`);
+  console.log(`  ${worker.loginNo} / worker / worker@office.local    / Password123!  (WORKER)`);
 }
 
 main()

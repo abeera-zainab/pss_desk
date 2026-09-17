@@ -40,7 +40,7 @@ async function loadTask(id: string) {
 async function assertCanAssignUsers(actor: AuthUser, userIds: string[]) {
   const uniqueIds = [...new Set(userIds)];
   const assignees = await prisma.user.findMany({
-    where: { id: { in: uniqueIds } }
+    where: { id: { in: uniqueIds }, deletedAt: null }
   });
   if (assignees.length !== uniqueIds.length) {
     throw badRequest("One or more users are invalid or inactive");

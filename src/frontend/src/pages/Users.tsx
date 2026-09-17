@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { Role, TaskType, UserDTO } from "@shared/types";
 import { api, apiError } from "../lib/api";
+import { useAuth } from "../store/auth";
 import { Badge, Modal, ErrorText, Spinner } from "../components/ui";
 import { formatDate } from "../lib/format";
 import { ROLE_LABEL } from "../lib/roles";
@@ -24,7 +25,9 @@ import {
   faClock,
   faTimes,
   faCheck,
-  faUserCog
+  faUserCog,
+  faTrash,
+  faIdCard
 } from '@fortawesome/free-solid-svg-icons';
 
 // Keyframes for initial page load only
@@ -73,11 +76,14 @@ const USER_TABS: { value: UserTab; label: string }[] = [
 ];
 
 export default function Users() {
+  const { user: me } = useAuth();
   const [users, setUsers] = useState<UserDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState<UserTab>("ALL");
+  const [pendingDelete, setPendingDelete] = useState<UserDTO | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   function load() {
     setLoading(true);
@@ -100,6 +106,20 @@ export default function Users() {
       alert(apiError(e));
       // Revert on error
       load();
+    }
+  }
+
+  async function confirmPermanentDelete() {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await api.permanentlyDeleteUser(pendingDelete.id);
+      setUsers((prev) => prev.filter((user) => user.id !== pendingDelete.id));
+      setPendingDelete(null);
+    } catch (e) {
+      alert(apiError(e));
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -134,7 +154,8 @@ export default function Users() {
     const matchesSearch =
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (user.username ?? "").toLowerCase().includes(searchTerm.toLowerCase());
+      (user.username ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (user.loginNo ?? "").toLowerCase().includes(searchTerm.toLowerCase());
     const isRoleTab = activeTab === "ALL" || activeTab === "ADMIN" || activeTab === "MANAGER" || activeTab === "WORKER";
     const matchesTab = isRoleTab
       ? activeTab === "ALL" || user.role === activeTab
@@ -211,7 +232,7 @@ export default function Users() {
             />
             <input
               type="text"
-              placeholder="Search by name or email..."
+              placeholder="Search by name, ID, username, or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full rounded-2xl border bg-white px-4 py-2.5 pl-10 text-sm transition-colors duration-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
@@ -266,6 +287,12 @@ export default function Users() {
                     <div className="flex items-center gap-2">
                       <FontAwesomeIcon icon={faUser} className="text-[10px] text-indigo-400" />
                       User
+                    </div>
+                  </th>
+                  <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: "#64748B" }}>
+                    <div className="flex items-center gap-2">
+                      <FontAwesomeIcon icon={faIdCard} className="text-[10px] text-indigo-400" />
+                      ID No
                     </div>
                   </th>
                   <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider" style={{ color: "#64748B" }}>
@@ -329,6 +356,9 @@ export default function Users() {
                         <span className="font-medium" style={{ color: "#1A1D23" }}>{u.name}</span>
                       </div>
                     </td>
+                    <td className="px-4 py-3 font-mono text-xs font-semibold" style={{ color: "#4F46E5" }}>
+                      {u.loginNo || "—"}
+                    </td>
                     <td className="px-4 py-3 font-mono text-xs" style={{ color: "#64748B" }}>
                       {u.username || "—"}
                     </td>
@@ -387,6 +417,7 @@ export default function Users() {
                       {formatDate(u.createdAt)}
                     </td>
                     <td className="px-4 py-3 text-right">
+                      <div className="inline-flex flex-wrap items-center justify-end gap-1">
                       <button
                         className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors duration-200 ${
                           u.isActive 
@@ -401,6 +432,16 @@ export default function Users() {
                         />
                         {u.isActive ? "Deactivate" : "Reactivate"}
                       </button>
+                      {me?.id !== u.id && (
+                        <button
+                          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50"
+                          onClick={() => setPendingDelete(u)}
+                        >
+                          <FontAwesomeIcon icon={faTrash} className="text-[10px]" />
+                          Delete
+                        </button>
+                      )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -420,6 +461,34 @@ export default function Users() {
         </div>
       )}
 
+      {pendingDelete && (
+        <Modal title="Permanently delete user" onClose={() => !deleting && setPendingDelete(null)}>
+          <p className="text-sm" style={{ color: "#475569" }}>
+            <span className="font-semibold" style={{ color: "#1A1D23" }}>{pendingDelete.name}</span>
+            {" "}({pendingDelete.email}) will be removed from every user list and will not be able to sign in.
+            Case history may still show them as “Deleted user”. This cannot be undone.
+          </p>
+          <div className="mt-5 flex items-center gap-3">
+            <button
+              type="button"
+              className="flex-1 rounded-2xl bg-gray-100 px-4 py-3 text-sm font-semibold text-gray-600 hover:bg-gray-200 disabled:opacity-50"
+              disabled={deleting}
+              onClick={() => setPendingDelete(null)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="flex-1 rounded-2xl bg-red-600 px-4 py-3 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+              disabled={deleting}
+              onClick={confirmPermanentDelete}
+            >
+              {deleting ? "Deleting…" : "Delete permanently"}
+            </button>
+          </div>
+        </Modal>
+      )}
+
       {showCreate && (
         <CreateUserModal
           onClose={() => setShowCreate(false)}
@@ -436,6 +505,7 @@ export default function Users() {
 function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
+  const [loginNo, setLoginNo] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<Role>("WORKER");
@@ -470,6 +540,7 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
       await api.createUser({
         name,
         username,
+        loginNo: loginNo.trim() || undefined,
         email,
         password,
         role,
@@ -520,6 +591,22 @@ function CreateUserModal({ onClose, onCreated }: { onClose: () => void; onCreate
             maxLength={32}
             autoComplete="off"
             placeholder="login name (letters, numbers, . _ -)"
+          />
+        </label>
+
+        <label className={label}>
+          <span className="flex items-center gap-2 text-sm font-semibold" style={{ color: "#1A1D23" }}>
+            <div className="flex h-6 w-6 items-center justify-center rounded-lg" style={{ background: "#EEF2FF" }}>
+              <FontAwesomeIcon icon={faIdCard} className="text-xs text-indigo-500" />
+            </div>
+            ID number
+          </span>
+          <input 
+            className={`${input} mt-1.5 rounded-xl border-gray-200 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-colors duration-200`} 
+            value={loginNo} 
+            onChange={(e) => setLoginNo(e.target.value)} 
+            autoComplete="off"
+            placeholder="Leave blank to auto-assign (PSS-0001)"
           />
         </label>
 

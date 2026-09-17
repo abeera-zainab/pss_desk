@@ -9,7 +9,7 @@ import { prisma } from "../lib/prisma";
 async function resolveScope(req: Request): Promise<string[]> {
   const queryUserId = req.query.userId as string | undefined;
   if (queryUserId) return [queryUserId];
-  const all = await prisma.user.findMany({ select: { id: true } });
+  const all = await prisma.user.findMany({ where: { deletedAt: null }, select: { id: true } });
   return all.map((u) => u.id);
 }
 

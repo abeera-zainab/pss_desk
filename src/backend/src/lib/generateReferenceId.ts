@@ -32,3 +32,13 @@ export async function generateCaseNumber(): Promise<string> {
   const number = counter.value.toString().padStart(4, "0");
   return `CASE-${number}`;
 }
+
+export async function generateLoginNo(): Promise<string> {
+  const key = "user_login_no";
+  const counter = await prisma.counter.upsert({
+    where: { key },
+    update: { value: { increment: 1 } },
+    create: { key, value: 1 }
+  });
+  return `PSS-${counter.value.toString().padStart(4, "0")}`;
+}

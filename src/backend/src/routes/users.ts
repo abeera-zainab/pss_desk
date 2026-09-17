@@ -20,6 +20,7 @@ router.get("/workers", requireRole("ADMIN", "MANAGER"), asyncHandler(c.listWorke
 router.get("/", requireRole("ADMIN"), validate(listUsersSchema), asyncHandler(c.list));
 router.post("/", requireRole("ADMIN"), validate(createUserSchema), asyncHandler(c.create));
 router.put("/:id", requireRole("ADMIN"), validate(updateUserSchema), asyncHandler(c.update));
+router.delete("/:id/permanent", requireRole("ADMIN"), validate(idParamSchema), asyncHandler(c.permanentlyRemove));
 router.delete("/:id", requireRole("ADMIN"), validate(idParamSchema), asyncHandler(c.remove));
 
 export default router;

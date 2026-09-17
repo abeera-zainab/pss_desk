@@ -16,7 +16,7 @@ export async function dashboard(user: AuthUser) {
   }
 
   const [totalUsers, totalCases, activeTasks, completedTasks, pendingApprovals] = await Promise.all([
-    user.role === "ADMIN" ? prisma.user.count() : Promise.resolve(0),
+    user.role === "ADMIN" ? prisma.user.count({ where: { deletedAt: null } }) : Promise.resolve(0),
     prisma.case.count(),
     prisma.task.count({
       where: { ...taskWhere, status: { in: ["PENDING", "IN_PROGRESS", "SUBMITTED", "UNDER_REVIEW"] } }

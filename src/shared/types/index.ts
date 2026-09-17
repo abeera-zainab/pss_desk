@@ -100,6 +100,7 @@ export interface UserDTO {
   id: string;
   name: string;
   username: string;
+  loginNo: string;
   email: string;
   role: Role;
   isActive: boolean;

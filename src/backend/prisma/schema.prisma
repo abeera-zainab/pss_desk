@@ -92,10 +92,12 @@ model User {
   id           String   @id @default(uuid())
   name         String
   username     String   @unique
+  loginNo      String   @unique
   email        String   @unique
   passwordHash String
   role         Role
   isActive     Boolean  @default(true)
+  deletedAt    DateTime?
   createdAt    DateTime @default(now())
   managerId    String?
   domains      TaskType[] @default([])
@@ -117,6 +119,7 @@ model User {
   refreshTokens RefreshToken[]
 
   @@index([email])
+  @@index([deletedAt])
 }
 
 model Case {

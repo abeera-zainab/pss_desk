@@ -252,6 +252,16 @@ export default function Profile() {
                 </dt>
                 <dd className="font-mono text-sm lg:text-base font-semibold" style={{ color: "#1A1D23" }}>{user.username || "—"}</dd>
               </div>
+
+              <div className="flex items-center justify-between py-4 text-sm lg:text-base">
+                <dt className="flex items-center gap-3" style={{ color: "#64748B" }}>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: "#EEF2FF" }}>
+                    <FontAwesomeIcon icon={faIdCard} className="text-sm text-indigo-500" />
+                  </div>
+                  ID number
+                </dt>
+                <dd className="font-mono text-sm lg:text-base font-semibold" style={{ color: "#1A1D23" }}>{user.loginNo || "—"}</dd>
+              </div>
               
               <div className="flex items-center justify-between py-4 text-sm lg:text-base">
                 <dt className="flex items-center gap-3" style={{ color: "#64748B" }}>

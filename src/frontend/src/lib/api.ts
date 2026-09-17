@@ -120,6 +120,7 @@ export const api = {
   createUser: (data: {
     name: string;
     username: string;
+    loginNo?: string;
     email: string;
     password: string;
     role: Role;
@@ -139,6 +140,7 @@ export const api = {
     }>
   ) => http.put(`/users/${id}`, data).then((r) => r.data as UserDTO),
   deleteUser: (id: string) => http.delete(`/users/${id}`).then((r) => r.data as UserDTO),
+  permanentlyDeleteUser: (id: string) => http.delete(`/users/${id}/permanent`).then((r) => r.data as { ok: boolean; id: string }),
 
   // cases
   getCases: (params?: { page?: number; limit?: number; status?: CaseStatus }) =>
