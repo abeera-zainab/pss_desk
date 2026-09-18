@@ -8,6 +8,7 @@ import { CASE_STATUS_BADGE, PRIORITY_BADGE, TASK_STATUS_BADGE, TASK_STATUS_LABEL
 import { formatDate } from "../lib/format";
 import { card, label, input, btn, btnDark, heading, eyebrow, link, colors } from "../lib/theme";
 import CaseBoard from "./CaseBoard";
+import { ReportLibrary } from "../components/caseFiles";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowLeft,
@@ -340,6 +341,7 @@ export default function CaseDetail() {
         </div>
 
         <div className="space-y-6" style={{ animation: "fadeUp 0.5s ease-out 0.25s both" }}>
+          <ReportLibrary kase={kase} canUpload={canManage} onChanged={load} />
           <div>
             <div className="mb-4 flex items-center gap-2.5">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl" style={{ background: "#EEF2FF" }}>

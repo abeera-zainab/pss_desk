@@ -233,9 +233,12 @@ export default function Attendance() {
               <FontAwesomeIcon icon={faArrowRightToBracket} className="text-emerald-500" />
               Check In
             </div>
-            <div className="mt-2 font-mono text-xl font-bold" style={{ color: "#1A1D23" }}>
+            <div className="mt-2 font-mono text-xl font-bold" style={{ color: today?.status === "LATE" ? "#D97706" : "#1A1D23" }}>
               {fmtTime(today?.checkIn ?? null)}
             </div>
+            {today?.status === "LATE" && (
+              <div className="mt-1 text-[10px] font-bold uppercase tracking-wider text-amber-600">Late</div>
+            )}
           </div>
           <div className="rounded-2xl border bg-gray-50/50 px-6 py-5 text-center hover:shadow-md transition-shadow duration-200" style={{ borderColor: "#E2E8F0" }}>
             <div className="text-xs font-medium uppercase tracking-wider flex items-center justify-center gap-2" style={{ color: "#94A3B8" }}>
@@ -291,6 +294,12 @@ export default function Attendance() {
             {busy && sessionOpen ? "Processing..." : sessionOpen ? "Check Out" : "Check Out"}
           </button>
         </div>
+
+        {today?.status === "LATE" && (
+          <p className="mt-5 text-center text-sm font-medium text-amber-700">
+            Check-in after 9:45 is marked late
+          </p>
+        )}
 
         <ErrorText message={error} />
       </div>
@@ -407,8 +416,13 @@ export default function Attendance() {
                         <td className="px-4 py-3 text-xs" style={{ color: "#64748B" }}>
                           {formatDate(r.date)}
                         </td>
-                        <td className="px-4 py-3 font-mono text-xs" style={{ color: "#1A1D23" }}>
+                        <td className="px-4 py-3 font-mono text-xs" style={{ color: r.status === "LATE" ? "#D97706" : "#1A1D23" }}>
                           {fmtTime(r.checkIn)}
+                          {r.status === "LATE" && (
+                            <span className="ml-2 rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-700">
+                              Late
+                            </span>
+                          )}
                         </td>
                         <td className="px-4 py-3 font-mono text-xs" style={{ color: "#1A1D23" }}>
                           {fmtTime(r.checkOut)}
@@ -424,9 +438,9 @@ export default function Attendance() {
                           {formatDurationMinutes(dailyTotals[r.date.slice(0, 10)] ?? 0)}
                         </td>
                         <td className="px-4 py-3">
-                          <Badge className={STATUS_BADGE[r.status]}>
-                            <FontAwesomeIcon icon={STATUS_ICON[r.status]} className="mr-1.5 text-[9px]" />
-                            {r.status.replace("_", " ")}
+                          <Badge className={STATUS_BADGE[r.status] ?? "bg-slate-50 text-slate-600"}>
+                            <FontAwesomeIcon icon={STATUS_ICON[r.status] ?? faCircle} className="mr-1.5 text-[9px]" />
+                            {r.status === "LATE" ? "Late" : r.status.replace("_", " ")}
                           </Badge>
                         </td>
                       </tr>

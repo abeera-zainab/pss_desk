@@ -1,4 +1,3 @@
-import { useRef, useState } from "react";
 import type { FileDTO } from "@shared/types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faExpand, faFileAlt, faTrash } from "@fortawesome/free-solid-svg-icons";
@@ -19,15 +18,33 @@ export function DriveFileCard({
 }) {
   return (
     <div className="group flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-md">
-      <button type="button" className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100" onClick={onOpen} title={`Open preview: ${file.filename}`}>
-        <DocumentThumbnail file={file} />
-        <span className="absolute right-1.5 top-1.5 rounded bg-black/55 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-slate-100">
+        <button type="button" className="h-full w-full" onClick={onOpen} title={`Open preview: ${file.filename}`}>
+          <DocumentThumbnail file={file} />
+        </button>
+        <span className="pointer-events-none absolute right-1.5 top-1.5 rounded bg-black/55 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
           {fileExt(file.filename) || "file"}
         </span>
-        <span className="absolute bottom-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-lg bg-white/95 text-indigo-600 shadow-sm">
+        {canDelete && onDelete && (
+          <button
+            type="button"
+            className="absolute left-1.5 top-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-lg bg-red-600 text-white shadow-sm hover:bg-red-700"
+            title="Delete report"
+            aria-label="Delete report"
+            onClick={() => onDelete(file.id, file.filename)}
+          >
+            <FontAwesomeIcon icon={faTrash} className="text-[11px]" />
+          </button>
+        )}
+        <button
+          type="button"
+          className="absolute bottom-1.5 right-1.5 z-10 flex h-7 w-7 items-center justify-center rounded-lg bg-white/95 text-indigo-600 shadow-sm"
+          title="Preview"
+          onClick={onOpen}
+        >
           <FontAwesomeIcon icon={faExpand} className="text-[11px]" />
-        </span>
-      </button>
+        </button>
+      </div>
       <div className="flex items-start gap-2 px-2.5 py-2">
         <FontAwesomeIcon icon={faFileAlt} className="mt-0.5 text-[11px] text-slate-400" />
         <div className="min-w-0 flex-1">
@@ -38,16 +55,6 @@ export function DriveFileCard({
             {fileSize(file.size)} · {formatDate(file.createdAt)}
           </p>
         </div>
-        {canDelete && onDelete && (
-          <button
-            type="button"
-            className="rounded p-1 text-slate-300 opacity-0 transition-opacity hover:bg-red-50 hover:text-red-600 group-hover:opacity-100"
-            title="Delete"
-            onClick={() => onDelete(file.id, file.filename)}
-          >
-            <FontAwesomeIcon icon={faTrash} className="text-[10px]" />
-          </button>
-        )}
       </div>
     </div>
   );

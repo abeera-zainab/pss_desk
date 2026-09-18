@@ -133,9 +133,12 @@ export default function AttendanceWidget() {
                 <FontAwesomeIcon icon={faCircle} className="text-[6px] text-emerald-400" />
                 Check In
               </div>
-              <div className="mt-0.5 font-mono text-sm font-bold" style={{ color: "#1A1D23" }}>
+              <div className="mt-0.5 font-mono text-sm font-bold" style={{ color: today?.status === "LATE" ? "#D97706" : "#1A1D23" }}>
                 {fmtTime(today?.checkIn)}
               </div>
+              {today?.status === "LATE" && (
+                <div className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-600">Late</div>
+              )}
             </div>
             <div className="rounded-xl border px-2 py-2.5 text-center transition-all duration-200 hover:shadow-sm" style={{ borderColor: "#E2E8F0" }}>
               <div className="text-[9px] font-medium uppercase tracking-wider flex items-center justify-center gap-1" style={{ color: "#94A3B8" }}>

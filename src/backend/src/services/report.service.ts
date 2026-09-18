@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma";
+import { isAfterOfficeClock } from "../utils/businessDay";
 
 function monthRange(month?: string): { from: Date; to: Date } {
   // month format: "YYYY-MM", defaults to current month
@@ -31,11 +32,15 @@ export async function attendanceReport(params: {
     }
     const bucket = byUser[r.userId];
     bucket.hoursMinutes += r.workedMinutes ?? 0;
-    if (r.status === "PRESENT") bucket.present++;
-    else if (r.status === "ABSENT") bucket.absent++;
-    else if (r.status === "ON_LEAVE") bucket.onLeave++;
-    else if (r.status === "HALF_DAY") bucket.halfDay++;
-    else if (r.status === "LATE") bucket.late++;
+    const status =
+      r.status === "LATE" || (r.status === "PRESENT" && r.checkIn && isAfterOfficeClock(r.checkIn, 9, 45))
+        ? "LATE"
+        : r.status;
+    if (status === "PRESENT") bucket.present++;
+    else if (status === "ABSENT") bucket.absent++;
+    else if (status === "ON_LEAVE") bucket.onLeave++;
+    else if (status === "HALF_DAY") bucket.halfDay++;
+    else if (status === "LATE") bucket.late++;
   }
 
   return { from, to, data: Object.values(byUser) };

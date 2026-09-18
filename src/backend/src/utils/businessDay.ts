@@ -54,3 +54,18 @@ export function daysBetweenInclusive(start: Date, end: Date): number {
   const ms = dateOnly(end).getTime() - dateOnly(start).getTime();
   return Math.round(ms / 86_400_000) + 1;
 }
+
+const clockFormatter = new Intl.DateTimeFormat("en-GB", {
+  timeZone: OFFICE_TZ,
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23"
+});
+
+/** True when `at` is strictly after hour:minute in the office timezone. */
+export function isAfterOfficeClock(at: Date, hour: number, minute: number): boolean {
+  const parts = Object.fromEntries(clockFormatter.formatToParts(at).map((p) => [p.type, p.value]));
+  const now = Number(parts.hour) * 3600 + Number(parts.minute) * 60 + Number(parts.second);
+  return now > hour * 3600 + minute * 60;
+}
