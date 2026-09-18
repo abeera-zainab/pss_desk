@@ -21,6 +21,7 @@ export default function IntelFolderPage() {
   const [dragOver, setDragOver] = useState(false);
   const [openIds, setOpenIds] = useState<Record<string, boolean>>({});
   const headerInput = useRef<HTMLInputElement | null>(null);
+  const uploadTargetId = useRef<string | null>(null);
 
   function load(silent = false) {
     if (!silent) setLoading(true);
@@ -68,6 +69,7 @@ export default function IntelFolderPage() {
         setUploadingName(f.name);
         await api.uploadCaseFile(caseId, f, activeFolder.value);
       }
+      setOpenIds((prev) => ({ ...prev, [caseId]: true }));
       load(true);
     } catch (err) {
       alert(apiError(err));
@@ -76,14 +78,23 @@ export default function IntelFolderPage() {
     }
   }
 
+  async function removeFile(caseId: string, fileId: string) {
+    await api.deleteCaseFile(caseId, fileId);
+    load(true);
+  }
+
   async function handleDelete(caseId: string, fileId: string, filename: string) {
     if (!window.confirm(`Delete "${filename}" from ${activeFolder.label}?`)) return;
     try {
-      await api.deleteCaseFile(caseId, fileId);
-      load(true);
+      await removeFile(caseId, fileId);
     } catch (err) {
       alert(apiError(err));
     }
+  }
+
+  function pickUpload(caseId: string) {
+    uploadTargetId.current = caseId;
+    headerInput.current?.click();
   }
 
   return (
@@ -109,7 +120,9 @@ export default function IntelFolderPage() {
         multiple
         className="hidden"
         onChange={(e) => {
-          if (defaultCase && e.target.files?.length) uploadTo(defaultCase.id, e.target.files);
+          const target = uploadTargetId.current || defaultCase?.id;
+          uploadTargetId.current = null;
+          if (target && e.target.files?.length) uploadTo(target, e.target.files);
           e.target.value = "";
         }}
       />
@@ -135,7 +148,9 @@ export default function IntelFolderPage() {
           <button
             type="button"
             disabled={!defaultCase || uploadingName !== null}
-            onClick={() => headerInput.current?.click()}
+            onClick={() => {
+              if (defaultCase) pickUpload(defaultCase.id);
+            }}
             className="inline-flex items-center gap-2 rounded-2xl px-5 py-2.5 text-sm font-semibold text-white shadow-md disabled:opacity-60"
             style={{ background: folder.color }}
           >
@@ -213,9 +228,23 @@ export default function IntelFolderPage() {
                     style={{ color: expanded ? folder.color : "#94A3B8" }}
                   />
                 </button>
-                <Badge className={CASE_STATUS_BADGE[kase.status] + " px-2 py-0.5 text-[10px]"}>
-                  {kase.status.replaceAll("_", " ")}
-                </Badge>
+                <div className="flex shrink-0 items-center gap-2">
+                  {canManage(kase) && (
+                    <button
+                      type="button"
+                      disabled={uploadingName !== null}
+                      onClick={() => pickUpload(kase.id)}
+                      className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-[11px] font-semibold text-white disabled:opacity-60"
+                      style={{ background: folder.color }}
+                    >
+                      <FontAwesomeIcon icon={uploadingName ? faSpinner : faUpload} className={uploadingName ? "animate-spin" : ""} />
+                      Upload
+                    </button>
+                  )}
+                  <Badge className={CASE_STATUS_BADGE[kase.status] + " px-2 py-0.5 text-[10px]"}>
+                    {kase.status.replaceAll("_", " ")}
+                  </Badge>
+                </div>
               </div>
               {expanded && (
                 <div className="mt-4">
@@ -224,7 +253,7 @@ export default function IntelFolderPage() {
                       type="button"
                       className="w-full rounded-2xl border border-dashed py-10 text-center text-sm text-slate-400 hover:border-indigo-300"
                       style={{ borderColor: "#E2E8F0" }}
-                      onClick={() => canManage(kase) && headerInput.current?.click()}
+                      onClick={() => canManage(kase) && pickUpload(kase.id)}
                     >
                       {canManage(kase) ? `No ${folder.label} reports yet — click Upload reports or drop files here` : `No ${folder.label} reports yet`}
                     </button>
@@ -248,7 +277,21 @@ export default function IntelFolderPage() {
           })}
         </div>
       )}
-      {preview && <CaseFilePreview file={preview} onClose={() => setPreview(null)} />}
+      {preview && (
+        <CaseFilePreview
+          file={preview}
+          onClose={() => setPreview(null)}
+          onDelete={
+            preview.caseId && cases.some((c) => c.id === preview.caseId && canManage(c))
+              ? async () => {
+                  if (!preview.caseId) return;
+                  await removeFile(preview.caseId, preview.id);
+                  setPreview(null);
+                }
+              : undefined
+          }
+        />
+      )}
     </div>
   );
 }

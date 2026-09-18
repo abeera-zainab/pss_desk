@@ -32,7 +32,7 @@ function FolderReports({
   const [search, setSearch] = useState("");
   const [uploadingName, setUploadingName] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
-  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(true);
   const fileInput = useRef<HTMLInputElement | null>(null);
   const dirInput = useRef<HTMLInputElement | null>(null);
   const [preview, setPreview] = useState<FileDTO | null>(null);
@@ -46,7 +46,7 @@ function FolderReports({
   useEffect(() => {
     setSearch("");
     setPreview(null);
-    setPreviewOpen(false);
+    setPreviewOpen(true);
   }, [folder.value]);
 
   async function upload(list: FileList | File[]) {
@@ -150,10 +150,11 @@ function FolderReports({
                 type="button"
                 disabled={isBusy}
                 onClick={() => fileInput.current?.click()}
-                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-60"
+                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                style={{ background: folder.color }}
               >
-                <FontAwesomeIcon icon={faUpload} className="mr-1 text-[10px]" />
-                Files
+                <FontAwesomeIcon icon={faUpload} className="text-[10px]" />
+                {isBusy ? "Uploading…" : "Upload reports"}
               </button>
               <button
                 type="button"
@@ -223,7 +224,21 @@ function FolderReports({
           )}
         </>
       )}
-      {preview && <CaseFilePreview file={preview} onClose={() => setPreview(null)} />}
+      {preview && (
+        <CaseFilePreview
+          file={preview}
+          onClose={() => setPreview(null)}
+          onDelete={
+            canUpload
+              ? async () => {
+                  await api.deleteCaseFile(kase.id, preview.id);
+                  setPreview(null);
+                  onChanged();
+                }
+              : undefined
+          }
+        />
+      )}
     </div>
   );
 }

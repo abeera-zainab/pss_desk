@@ -282,7 +282,21 @@ export function CardFolderBlock({
           </div>
         )}
       </div>
-      {preview && <CaseFilePreview file={preview} onClose={() => setPreview(null)} />}
+      {preview && (
+        <CaseFilePreview
+          file={preview}
+          onClose={() => setPreview(null)}
+          onDelete={
+            canUpload
+              ? async () => {
+                  await api.deleteCaseFile(kase.id, preview.id);
+                  setPreview(null);
+                  onChanged();
+                }
+              : undefined
+          }
+        />
+      )}
     </>
   );
 }

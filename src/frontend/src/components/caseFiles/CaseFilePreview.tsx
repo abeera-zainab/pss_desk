@@ -2,8 +2,8 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import type { FileDTO } from "@shared/types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faDownload, faSpinner, faTimes } from "@fortawesome/free-solid-svg-icons";
-import { api } from "../../lib/api";
+import { faDownload, faSpinner, faTimes, faTrash } from "@fortawesome/free-solid-svg-icons";
+import { api, apiError } from "../../lib/api";
 import { formatDate, fileSize } from "../../lib/format";
 import { getCachedFileBlob } from "./blobCache";
 import { getFileIcon, isImageFile, isPdfFile } from "./fileKinds";
@@ -103,7 +103,15 @@ function PdfViewer({
   );
 }
 
-export function CaseFilePreview({ file, onClose }: { file: FileDTO; onClose: () => void }) {
+export function CaseFilePreview({
+  file,
+  onClose,
+  onDelete
+}: {
+  file: FileDTO;
+  onClose: () => void;
+  onDelete?: () => void | Promise<void>;
+}) {
   const stageRef = useRef<HTMLDivElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const [blob, setBlob] = useState<Blob | null>(null);
@@ -162,6 +170,25 @@ export function CaseFilePreview({ file, onClose }: { file: FileDTO; onClose: () 
           </span>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          {onDelete && (
+            <button
+              type="button"
+              title="Delete report"
+              aria-label="Delete report"
+              onClick={async () => {
+                if (!window.confirm(`Delete "${file.filename}"?`)) return;
+                try {
+                  await onDelete();
+                  onClose();
+                } catch (err) {
+                  alert(apiError(err));
+                }
+              }}
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-red-500 hover:bg-red-50 hover:text-red-700"
+            >
+              <FontAwesomeIcon icon={faTrash} />
+            </button>
+          )}
           <button
             type="button"
             title="Download"

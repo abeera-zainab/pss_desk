@@ -68,8 +68,8 @@ docker compose up -d --build
 
 The API container applies all pending migrations before it starts serving, so
 there is no separate migration step. If `DATA_ROOT/postgres` is empty, Postgres
-also loads `seed/database.sql` (the snapshot committed in this repo) during
-cluster init. Watch it come up:
+also loads `seed/database.sql` then `seed/migration.sql` (the snapshot and schema
+deltas committed in this repo) during cluster init. Watch it come up:
 
 ```bash
 docker compose logs -f backend

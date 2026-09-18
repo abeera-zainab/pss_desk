@@ -378,7 +378,8 @@ CREATE TABLE public."User" (
     "managerId" text,
     domains public."TaskType"[] DEFAULT ARRAY[]::public."TaskType"[],
     username text NOT NULL,
-    "deletedAt" timestamp(3) without time zone
+    "deletedAt" timestamp(3) without time zone,
+    "loginNo" text NOT NULL
 );
 
 
@@ -607,6 +608,7 @@ COPY public."Counter" (key, value) FROM stdin;
 task_FR	1
 task_GEO_LOCATION	1
 case_number	3
+user_login_no	8
 \.
 
 
@@ -797,15 +799,15 @@ COPY public."TaskLink" (id, "taskId", url, label, "createdAt") FROM stdin;
 -- Data for Name: User; Type: TABLE DATA; Schema: public; Owner: -
 --
 
-COPY public."User" (id, name, email, "passwordHash", role, "isActive", "createdAt", "managerId", domains, username, "deletedAt") FROM stdin;
-e9d3e845-45e0-4285-b39b-ecd1977eac4c	Manager User	manager@office.local	$2a$10$hpLQ50oTo4HKxFUJGpRWvumYfSjfc2ajN7Tp5YXnNAMHNgeEq36lS	MANAGER	f	2026-09-10 05:16:03.282	d05b3529-874b-4c1b-9204-eb2b0ed5b43b	{}	manager	\N
-d05b3529-874b-4c1b-9204-eb2b0ed5b43b	Admin User	admin@office.local	$2a$10$hpLQ50oTo4HKxFUJGpRWvumYfSjfc2ajN7Tp5YXnNAMHNgeEq36lS	ADMIN	t	2026-09-10 05:16:03.264	\N	{}	admin	\N
-631c93c1-8a89-4580-9258-7d7ea564c31f	Hassan Azwar	hazwar.phdis24seecs@seecs.edu.pk	$2a$10$yBFNzZKIY0UelvBjDlWYdeaV8yVCwdOF.ZlFjwi4QfjebH6V.uGb.	ADMIN	t	2026-09-15 07:18:28.081	\N	{}	hazwar.phdis24seecs	\N
-2f99f7cc-6cba-4dfe-b745-ffa28ef1c92a	taymur iqbal	taymuriqbal598@gmail.com	$2a$10$xc6PLDsfxfJWBdBmzzW0lOrRj2xLQ8nHKSIdcAziIIoJZw2v/V4Qe	MANAGER	t	2026-09-15 07:19:26.633	\N	{}	taymuriqbal598	\N
-7f622019-3dfe-4410-8f55-a9c8c95638e4	abeera zainab	abeerazainab96@gmail.com	$2a$10$M0okydAzbHFALfwnKXseAussi0lV04Bh17b4NWqcoy7.08qEB5v2y	WORKER	t	2026-09-15 07:20:00.642	2f99f7cc-6cba-4dfe-b745-ffa28ef1c92a	{GEO_LOCATION}	abeerazainab96	\N
-ab931dd6-cd08-4ecf-8d5d-fa29a557d1a2	yjxkls	abeerazainab14@gmail.com	$2a$10$dU0pI1qGDE4jJbUEdqxTouqpHSYf62dnJwtR3ij16yJ7aMrcIQsbS	WORKER	f	2026-09-15 07:52:56.965	2f99f7cc-6cba-4dfe-b745-ffa28ef1c92a	{PSS_OFFENSIVE}	abeerazainab14	\N
-81972e2c-6047-454e-a1f9-cae0ceec2c27	Worker User	worker@office.local	$2a$10$hpLQ50oTo4HKxFUJGpRWvumYfSjfc2ajN7Tp5YXnNAMHNgeEq36lS	WORKER	f	2026-09-10 05:16:03.289	e9d3e845-45e0-4285-b39b-ecd1977eac4c	{}	worker	\N
-eca16eef-afc4-4433-866f-494bce73c906	Second Worker	worker2@office.local	$2a$10$hpLQ50oTo4HKxFUJGpRWvumYfSjfc2ajN7Tp5YXnNAMHNgeEq36lS	WORKER	f	2026-09-10 05:16:03.294	e9d3e845-45e0-4285-b39b-ecd1977eac4c	{}	worker2	\N
+COPY public."User" (id, name, email, "passwordHash", role, "isActive", "createdAt", "managerId", domains, username, "deletedAt", "loginNo") FROM stdin;
+e9d3e845-45e0-4285-b39b-ecd1977eac4c	Manager User	manager@office.local	$2a$10$hpLQ50oTo4HKxFUJGpRWvumYfSjfc2ajN7Tp5YXnNAMHNgeEq36lS	MANAGER	f	2026-09-10 05:16:03.282	d05b3529-874b-4c1b-9204-eb2b0ed5b43b	{}	manager	\N	PSS-0002
+d05b3529-874b-4c1b-9204-eb2b0ed5b43b	Admin User	admin@office.local	$2a$10$hpLQ50oTo4HKxFUJGpRWvumYfSjfc2ajN7Tp5YXnNAMHNgeEq36lS	ADMIN	t	2026-09-10 05:16:03.264	\N	{}	admin	\N	PSS-0001
+631c93c1-8a89-4580-9258-7d7ea564c31f	Hassan Azwar	hazwar.phdis24seecs@seecs.edu.pk	$2a$10$yBFNzZKIY0UelvBjDlWYdeaV8yVCwdOF.ZlFjwi4QfjebH6V.uGb.	ADMIN	t	2026-09-15 07:18:28.081	\N	{}	hazwar.phdis24seecs	\N	PSS-0005
+2f99f7cc-6cba-4dfe-b745-ffa28ef1c92a	taymur iqbal	taymuriqbal598@gmail.com	$2a$10$xc6PLDsfxfJWBdBmzzW0lOrRj2xLQ8nHKSIdcAziIIoJZw2v/V4Qe	MANAGER	t	2026-09-15 07:19:26.633	\N	{}	taymuriqbal598	\N	PSS-0006
+7f622019-3dfe-4410-8f55-a9c8c95638e4	abeera zainab	abeerazainab96@gmail.com	$2a$10$M0okydAzbHFALfwnKXseAussi0lV04Bh17b4NWqcoy7.08qEB5v2y	WORKER	t	2026-09-15 07:20:00.642	2f99f7cc-6cba-4dfe-b745-ffa28ef1c92a	{GEO_LOCATION}	abeerazainab96	\N	PSS-0007
+ab931dd6-cd08-4ecf-8d5d-fa29a557d1a2	yjxkls	abeerazainab14@gmail.com	$2a$10$dU0pI1qGDE4jJbUEdqxTouqpHSYf62dnJwtR3ij16yJ7aMrcIQsbS	WORKER	f	2026-09-15 07:52:56.965	2f99f7cc-6cba-4dfe-b745-ffa28ef1c92a	{PSS_OFFENSIVE}	abeerazainab14	\N	PSS-0008
+81972e2c-6047-454e-a1f9-cae0ceec2c27	Worker User	worker@office.local	$2a$10$hpLQ50oTo4HKxFUJGpRWvumYfSjfc2ajN7Tp5YXnNAMHNgeEq36lS	WORKER	f	2026-09-10 05:16:03.289	e9d3e845-45e0-4285-b39b-ecd1977eac4c	{}	worker	\N	PSS-0003
+eca16eef-afc4-4433-866f-494bce73c906	Second Worker	worker2@office.local	$2a$10$hpLQ50oTo4HKxFUJGpRWvumYfSjfc2ajN7Tp5YXnNAMHNgeEq36lS	WORKER	f	2026-09-10 05:16:03.294	e9d3e845-45e0-4285-b39b-ecd1977eac4c	{}	worker2	\N	PSS-0004
 \.
 
 
@@ -830,6 +832,7 @@ ef17490a-1752-4f49-aa9e-b706488e664e	946d3b5edaa6b7239190e5b6d1acfddc25873f3fedd
 960c64a9-2752-49a9-80b7-a15042edf866	57e81b269ab8a013753e6bfe222e7eb16dc3c137978ad0a6f07b6a021d6de4b3	2026-09-10 05:16:02.677546+00	20260716044839_board_per_case	\N	\N	2026-09-10 05:16:02.604562+00	1
 3766f535-646f-410d-8c7e-c824e99fcd0c	08a5701ed3764edb1811f4f325dc9b076ecc1ace4559d5ab811d67dcb7c7ceb5	2026-09-10 05:16:02.977994+00	20260720062502_add_task_assignments	\N	\N	2026-09-10 05:16:02.683546+00	1
 b433e8af-2ebb-4030-9ac9-04a59f821f7b	f6189509815aedc38cb841add06b1f8dd3539365b11706e54f55bc445810e6fe	2026-09-14 05:59:02.495568+00	20260914000000_add_case_file_folder	\N	\N	2026-09-14 05:59:02.125266+00	1
+9f1c6e2a-4b8d-41a3-9e07-6c2d8f5a1b90	2a7277f5fdd9f7b5bdab708b3a2a5c0cab2433fb7637e0065cd110f9292825a9	2026-09-17 06:00:00.000000+00	20260917000000_user_login_no	\N	\N	2026-09-17 06:00:00.000000+00	1
 \.
 
 
@@ -1197,6 +1200,13 @@ CREATE UNIQUE INDEX "User_email_key" ON public."User" USING btree (email);
 --
 
 CREATE UNIQUE INDEX "User_username_key" ON public."User" USING btree (username);
+
+
+--
+-- Name: User_loginNo_key; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX "User_loginNo_key" ON public."User" USING btree ("loginNo");
 
 
 --

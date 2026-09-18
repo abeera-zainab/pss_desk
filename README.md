@@ -19,8 +19,9 @@ docker compose up -d --build
 Open **http://localhost:11802**.
 
 On a **new** machine with an empty `DATA_ROOT`, Postgres loads `seed/database.sql`
-so cases, users, and file records are already there. That dump only runs once,
-when the database directory is first created.
+then `seed/migration.sql` so cases, users, sign-in IDs (`loginNo`), and file
+records are already there. Those scripts only run once, when the database
+directory is first created.
 
 The first start also applies all database migrations. To create the demo
 accounts on an empty dump-less database, set `SEED_ON_START=true` before the first run.

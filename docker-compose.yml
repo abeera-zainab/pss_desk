@@ -28,6 +28,7 @@ services:
       # Loaded only when the Postgres data directory is empty (first start on a
       # new machine). Existing clusters are left untouched.
       - ./seed/database.sql:/docker-entrypoint-initdb.d/01-seed.sql:ro
+      - ./seed/migration.sql:/docker-entrypoint-initdb.d/02-migration.sql:ro
     ports:
       # Exposed for backups and psql access. Bound to localhost only - nothing
       # outside this host has any business reaching the database directly.
