@@ -18,6 +18,27 @@ docker compose up -d --build
 
 Open **http://localhost:11802**.
 
+### Updating an existing machine (git pull)
+
+The UI is baked into the Docker image. `git pull` alone does **not** change what
+the browser shows. After every pull:
+
+```bash
+git pull origin main
+docker compose up -d --build
+```
+
+Then hard-refresh the browser (**Ctrl+F5**). If the page still looks old, rebuild
+without cache:
+
+```bash
+docker compose build --no-cache frontend backend
+docker compose up -d
+```
+
+Sign in as **Admin** (or the manager assigned to the case) to see **Upload** and
+the delete icon on Initial OSINT / GEOINT / Threat Alert reports.
+
 On a **new** machine with an empty `DATA_ROOT`, Postgres loads `seed/database.sql`
 then `seed/migration.sql` so cases, users, sign-in IDs (`loginNo`), and file
 records are already there. Those scripts only run once, when the database

@@ -110,10 +110,23 @@ before the server is reachable by anyone else.
 
 ## Updating
 
+The React UI is compiled into the `frontend` image. Pulling code and running
+`docker compose up -d` without `--build` keeps the old UI.
+
 ```bash
-cd ~/pss_desk
-git pull
+cd ~/pss_desk   # or the Windows clone folder
+git pull origin main
 docker compose up -d --build
+```
+
+Hard-refresh the browser (Ctrl+F5). Upload and delete on case reports are shown
+only to Admin and to the manager assigned to that case.
+
+If the UI is still stale:
+
+```bash
+docker compose build --no-cache frontend backend
+docker compose up -d
 ```
 
 Migrations are applied automatically on start. Take a backup first if the release
